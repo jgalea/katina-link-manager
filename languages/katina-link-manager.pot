@@ -1,0 +1,839 @@
+# Copyright (C) 2026 RebelCode
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Katina Link Manager 1.1.5\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/katina-link-manager\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-06T11:19:55+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: katina-link-manager\n"
+
+#. Plugin Name of the plugin
+#: katina-link-manager.php
+#: includes/class-katina-post-type.php:27
+msgid "Katina Link Manager"
+msgstr ""
+
+#. Description of the plugin
+#: katina-link-manager.php
+msgid "Manage, cloak, track, and optimize your outbound links from one place."
+msgstr ""
+
+#. Author of the plugin
+#: katina-link-manager.php
+msgid "RebelCode"
+msgstr ""
+
+#. Author URI of the plugin
+#: katina-link-manager.php
+msgid "https://rebelcode.com"
+msgstr ""
+
+#: includes/class-katina-admin.php:34
+#: views/admin-dashboard.php:87
+msgid "Broken / Error"
+msgstr ""
+
+#: includes/class-katina-admin.php:35
+#: includes/class-katina-link-health.php:323
+msgid "Broken"
+msgstr ""
+
+#: includes/class-katina-admin.php:36
+#: includes/class-katina-link-health.php:325
+msgid "Error"
+msgstr ""
+
+#: includes/class-katina-admin.php:37
+#: includes/class-katina-link-health.php:324
+#: views/admin-dashboard.php:92
+msgid "Server Error"
+msgstr ""
+
+#: includes/class-katina-admin.php:38
+#: includes/class-katina-link-health.php:322
+#: views/admin-dashboard.php:82
+msgid "Healthy"
+msgstr ""
+
+#: includes/class-katina-admin.php:39
+#: includes/class-katina-link-health.php:328
+#: views/admin-dashboard.php:97
+msgid "Unchecked"
+msgstr ""
+
+#: includes/class-katina-admin.php:40
+#: includes/class-katina-link-health.php:326
+msgid "No URL"
+msgstr ""
+
+#. translators: %s: filter label
+#: includes/class-katina-admin.php:49
+#, php-format
+msgid "Filter active: %s."
+msgstr ""
+
+#: includes/class-katina-admin.php:52
+msgid "Clear filter"
+msgstr ""
+
+#: includes/class-katina-admin.php:97
+#: includes/class-katina-admin.php:98
+msgid "Dashboard"
+msgstr ""
+
+#: includes/class-katina-admin.php:115
+msgid "Link Settings"
+msgstr ""
+
+#: includes/class-katina-admin.php:126
+msgid "Click Statistics"
+msgstr ""
+
+#: includes/class-katina-admin.php:150
+msgid "Total clicks"
+msgstr ""
+
+#: includes/class-katina-admin.php:154
+msgid "Last 30 days"
+msgstr ""
+
+#: includes/class-katina-admin.php:158
+msgid "Last 7 days"
+msgstr ""
+
+#: includes/class-katina-admin.php:165
+msgid "30-day share"
+msgstr ""
+
+#: includes/class-katina-admin.php:211
+msgid "Destination"
+msgstr ""
+
+#: includes/class-katina-admin.php:212
+#: views/link-meta-box.php:20
+msgid "Cloaked URL"
+msgstr ""
+
+#: includes/class-katina-admin.php:213
+#: views/admin-dashboard.php:114
+msgid "Clicks"
+msgstr ""
+
+#: includes/class-katina-admin.php:214
+msgid "Health"
+msgstr ""
+
+#. translators: %d: number of links imported
+#: includes/class-katina-csv.php:27
+#, php-format
+msgid "%d link imported."
+msgid_plural "%d links imported."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of rows skipped (slug existed)
+#: includes/class-katina-csv.php:32
+#, php-format
+msgid " %d row skipped (slug already exists)."
+msgid_plural " %d rows skipped (slug already exists)."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of rows skipped (missing fields)
+#: includes/class-katina-csv.php:38
+#, php-format
+msgid " %d row skipped (missing title or destination URL)."
+msgid_plural " %d rows skipped (missing title or destination URL)."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of rows that failed to import
+#: includes/class-katina-csv.php:44
+#, php-format
+msgid " %d row failed."
+msgid_plural " %d rows failed."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-katina-csv.php:50
+msgid "Export"
+msgstr ""
+
+#: includes/class-katina-csv.php:51
+msgid "Download every link as a CSV file. Excel-safe (UTF-8 with BOM)."
+msgstr ""
+
+#: includes/class-katina-csv.php:55
+msgid "Export CSV"
+msgstr ""
+
+#: includes/class-katina-csv.php:60
+msgid "Import"
+msgstr ""
+
+#. translators: %s: comma-separated column list
+#: includes/class-katina-csv.php:65
+#, php-format
+msgid "Upload a CSV with these columns: %s. Required: title, destination_url. Existing slugs are skipped."
+msgstr ""
+
+#: includes/class-katina-csv.php:69
+msgid "Download sample CSV"
+msgstr ""
+
+#: includes/class-katina-csv.php:75
+msgid "Import CSV"
+msgstr ""
+
+#: includes/class-katina-link-health.php:327
+msgid "Unknown"
+msgstr ""
+
+#: includes/class-katina-post-type.php:16
+msgid "Links"
+msgstr ""
+
+#: includes/class-katina-post-type.php:17
+#: views/admin-dashboard.php:113
+msgid "Link"
+msgstr ""
+
+#: includes/class-katina-post-type.php:18
+#: includes/class-katina-post-type.php:19
+msgid "Add New Link"
+msgstr ""
+
+#: includes/class-katina-post-type.php:20
+msgid "Edit Link"
+msgstr ""
+
+#: includes/class-katina-post-type.php:21
+msgid "New Link"
+msgstr ""
+
+#: includes/class-katina-post-type.php:22
+msgid "View Link"
+msgstr ""
+
+#: includes/class-katina-post-type.php:23
+msgid "Search Links"
+msgstr ""
+
+#: includes/class-katina-post-type.php:24
+msgid "No links found"
+msgstr ""
+
+#: includes/class-katina-post-type.php:25
+msgid "No links found in trash"
+msgstr ""
+
+#: includes/class-katina-post-type.php:26
+msgid "All Links"
+msgstr ""
+
+#: includes/class-katina-post-type.php:52
+msgid "Link Categories"
+msgstr ""
+
+#: includes/class-katina-post-type.php:53
+msgid "Link Category"
+msgstr ""
+
+#: includes/class-katina-post-type.php:54
+msgid "Add New Category"
+msgstr ""
+
+#: includes/class-katina-post-type.php:55
+msgid "Edit Category"
+msgstr ""
+
+#: includes/class-katina-post-type.php:56
+msgid "Search Categories"
+msgstr ""
+
+#: includes/class-katina-post-type.php:57
+msgid "All Categories"
+msgstr ""
+
+#: includes/class-katina-post-type.php:69
+msgid "Link Tags"
+msgstr ""
+
+#: includes/class-katina-post-type.php:70
+msgid "Link Tag"
+msgstr ""
+
+#: includes/class-katina-post-type.php:71
+msgid "Add New Tag"
+msgstr ""
+
+#: includes/class-katina-post-type.php:72
+msgid "Edit Tag"
+msgstr ""
+
+#: includes/class-katina-post-type.php:73
+msgid "Search Tags"
+msgstr ""
+
+#: includes/class-katina-post-type.php:74
+msgid "All Tags"
+msgstr ""
+
+#: includes/class-katina-privacy.php:49
+#: includes/class-katina-privacy.php:57
+#: includes/class-katina-privacy.php:84
+msgid "Katina Link Manager click logs"
+msgstr ""
+
+#: includes/class-katina-privacy.php:87
+msgid "Link ID"
+msgstr ""
+
+#: includes/class-katina-privacy.php:88
+msgid "Clicked at"
+msgstr ""
+
+#: includes/class-katina-privacy.php:89
+msgid "Referrer"
+msgstr ""
+
+#: includes/class-katina-privacy.php:90
+msgid "Country code"
+msgstr ""
+
+#: includes/class-katina-privacy.php:128
+msgid "This site uses Katina Link Manager to manage and track clicks on outbound links. When you click a managed link the following data may be recorded: the timestamp (UTC), the destination link, the referring page (with query strings stripped), a 2-letter country code derived from your IP, and a one-way hash of your browser user-agent for bot detection. Your IP address is not stored. Click logs older than the configured retention period are automatically deleted."
+msgstr ""
+
+#: includes/class-katina-privacy.php:129
+msgid "Katina Link Manager also performs background health checks against the destinations of your managed links. Those destination servers will see periodic requests from this site identifying themselves with a \"Katina Link Manager Health Checker\" user-agent."
+msgstr ""
+
+#. translators: %s: provider name
+#: includes/class-katina-privacy.php:135
+#, php-format
+msgid "Katina Link Manager Pro is enabled and may transmit excerpts of post content to %s for AI-driven link suggestions and content gap analysis. Review that provider's privacy policy and add it to your processor list as required by your jurisdiction."
+msgstr ""
+
+#: includes/class-katina-settings.php:39
+msgid "General"
+msgstr ""
+
+#: includes/class-katina-settings.php:40
+msgid "Tracking"
+msgstr ""
+
+#: includes/class-katina-settings.php:41
+#: includes/class-katina-settings.php:103
+msgid "Modules"
+msgstr ""
+
+#: includes/class-katina-settings.php:45
+msgid "Pro"
+msgstr ""
+
+#: includes/class-katina-settings.php:71
+#: views/admin-settings.php:8
+msgid "Katina Link Manager Settings"
+msgstr ""
+
+#: includes/class-katina-settings.php:72
+msgid "Settings"
+msgstr ""
+
+#: includes/class-katina-settings.php:81
+#: views/admin-wizard.php:48
+msgid "Link Defaults"
+msgstr ""
+
+#: includes/class-katina-settings.php:83
+#: views/admin-wizard.php:52
+msgid "URL Prefix"
+msgstr ""
+
+#: includes/class-katina-settings.php:84
+msgid "Default Redirect Type"
+msgstr ""
+
+#: includes/class-katina-settings.php:89
+msgid "Default Nofollow"
+msgstr ""
+
+#: includes/class-katina-settings.php:90
+msgid "Default Sponsored"
+msgstr ""
+
+#: includes/class-katina-settings.php:91
+msgid "Default Open in New Window"
+msgstr ""
+
+#: includes/class-katina-settings.php:92
+msgid "Default Pass Query Strings"
+msgstr ""
+
+#: includes/class-katina-settings.php:95
+msgid "Click Tracking"
+msgstr ""
+
+#: includes/class-katina-settings.php:97
+msgid "Enable Click Tracking"
+msgstr ""
+
+#: includes/class-katina-settings.php:98
+msgid "Disable IP Collection (GDPR)"
+msgstr ""
+
+#: includes/class-katina-settings.php:99
+msgid "Excluded Bots (one per line)"
+msgstr ""
+
+#: includes/class-katina-settings.php:100
+msgid "Click Log Retention (days)"
+msgstr ""
+
+#: includes/class-katina-settings.php:100
+msgid "Click records older than this are deleted automatically each day. Set to 0 to keep forever (not GDPR-recommended)."
+msgstr ""
+
+#: includes/class-katina-settings.php:105
+msgid "Link Fixer"
+msgstr ""
+
+#: includes/class-katina-settings.php:105
+msgid "Rewrites outbound links in post content based on your rules."
+msgstr ""
+
+#: includes/class-katina-settings.php:106
+msgid "Link Health Checks"
+msgstr ""
+
+#: includes/class-katina-settings.php:106
+msgid "Off by default. When enabled, the plugin periodically sends outbound HTTP requests to each link's destination URL to detect broken or error responses."
+msgstr ""
+
+#: includes/class-katina-settings.php:110
+msgid "Toggle features on or off. Disabling a module hides its UI and stops any scheduled tasks associated with it."
+msgstr ""
+
+#. translators: 1: site home URL, 2: URL prefix value
+#: includes/class-katina-settings.php:152
+#, php-format
+msgid "Your links will look like: %1$s/%2$s/your-link/"
+msgstr ""
+
+#: includes/class-katina-settings.php:153
+msgid "Changing the prefix invalidates every existing cloaked URL already published on your site or in external content."
+msgstr ""
+
+#: includes/class-katina-setup-wizard.php:22
+msgid "Katina Link Manager Setup"
+msgstr ""
+
+#: includes/class-katina-setup-wizard.php:23
+msgid "Setup"
+msgstr ""
+
+#. translators: %s: setup wizard link
+#: includes/class-katina-setup-wizard.php:66
+#, php-format
+msgid "Welcome to Katina Link Manager! Complete the %s to get started."
+msgstr ""
+
+#: includes/class-katina-setup-wizard.php:67
+msgid "setup wizard"
+msgstr ""
+
+#: includes/class-katina-tools.php:16
+msgid "Import / Export"
+msgstr ""
+
+#: includes/class-katina-tools.php:17
+msgid "Migrate"
+msgstr ""
+
+#: includes/class-katina-tools.php:41
+#: includes/class-katina-tools.php:54
+msgid "Katina Link Manager Tools"
+msgstr ""
+
+#: includes/class-katina-tools.php:42
+msgid "Tools"
+msgstr ""
+
+#: views/admin-dashboard.php:31
+msgid "Katina Link Manager Dashboard"
+msgstr ""
+
+#: views/admin-dashboard.php:37
+msgid "Total Links"
+msgstr ""
+
+#: views/admin-dashboard.php:42
+msgid "Total Clicks"
+msgstr ""
+
+#: views/admin-dashboard.php:47
+msgid "Clicks (30 days)"
+msgstr ""
+
+#: views/admin-dashboard.php:52
+msgid "Clicks (7 days)"
+msgstr ""
+
+#. translators: %d: number of links queued for health recheck
+#: views/admin-dashboard.php:65
+#, php-format
+msgid "Health recheck queued for %d link. Results will appear here as the background job completes — refresh in a minute or two."
+msgid_plural "Health recheck queued for %d links. Results will appear here as the background job completes — refresh in a minute or two."
+msgstr[0] ""
+msgstr[1] ""
+
+#: views/admin-dashboard.php:69
+msgid "Link Health"
+msgstr ""
+
+#: views/admin-dashboard.php:103
+msgid "Recheck All Links Now"
+msgstr ""
+
+#: views/admin-dashboard.php:104
+msgid "Background checks run hourly and stagger across the week."
+msgstr ""
+
+#: views/admin-dashboard.php:109
+msgid "Top Links (Last 30 Days)"
+msgstr ""
+
+#: views/admin-dashboard.php:134
+msgid "No links yet"
+msgstr ""
+
+#: views/admin-dashboard.php:135
+msgid "Create your first cloaked link to start tracking clicks."
+msgstr ""
+
+#: views/admin-dashboard.php:136
+msgid "Add your first link"
+msgstr ""
+
+#: views/admin-dashboard.php:139
+msgid "No click data yet. Clicks will appear here once your links start getting traffic."
+msgstr ""
+
+#: views/admin-dashboard.php:140
+msgid "View all links"
+msgstr ""
+
+#. translators: %s: source plugin name (e.g. ThirstyAffiliates)
+#: views/admin-migration.php:62
+#, php-format
+msgid "Migration from %s complete!"
+msgstr ""
+
+#. translators: %d: number of links imported
+#: views/admin-migration.php:67
+#, php-format
+msgid "%d link imported"
+msgid_plural "%d links imported"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of categories created
+#: views/admin-migration.php:71
+#, php-format
+msgid "%d category created"
+msgid_plural "%d categories created"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of click records imported
+#: views/admin-migration.php:75
+#, php-format
+msgid "%d click record imported"
+msgid_plural "%d click records imported"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of links skipped
+#: views/admin-migration.php:80
+#, php-format
+msgid "%d link skipped (already exists or no URL)"
+msgid_plural "%d links skipped (already exist or no URL)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of errors
+#: views/admin-migration.php:86
+#, php-format
+msgid "%d error occurred"
+msgid_plural "%d errors occurred"
+msgstr[0] ""
+msgstr[1] ""
+
+#: views/admin-migration.php:90
+msgid "View imported links"
+msgstr ""
+
+#. translators: 1: number of posts scanned, 2: number of posts updated
+#: views/admin-migration.php:98
+#, php-format
+msgid "Content scan: %1$d posts scanned, %2$d posts updated with new link URLs."
+msgstr ""
+
+#. translators: %s: source plugin name (e.g. ThirstyAffiliates)
+#: views/admin-migration.php:111
+#, php-format
+msgid "Cleaned up leftover %s data."
+msgstr ""
+
+#. translators: %d: number of posts deleted
+#: views/admin-migration.php:116
+#, php-format
+msgid "%d post deleted"
+msgid_plural "%d posts deleted"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of postmeta rows deleted
+#: views/admin-migration.php:120
+#, php-format
+msgid "%d postmeta row deleted"
+msgid_plural "%d postmeta rows deleted"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of taxonomy terms deleted
+#: views/admin-migration.php:124
+#, php-format
+msgid "%d taxonomy term deleted"
+msgid_plural "%d taxonomy terms deleted"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of database tables dropped
+#: views/admin-migration.php:128
+#, php-format
+msgid "%d database table dropped"
+msgid_plural "%d database tables dropped"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of plugin options deleted
+#: views/admin-migration.php:132
+#, php-format
+msgid "%d plugin option deleted"
+msgid_plural "%d plugin options deleted"
+msgstr[0] ""
+msgstr[1] ""
+
+#: views/admin-migration.php:141
+msgid "No plugins detected"
+msgstr ""
+
+#: views/admin-migration.php:142
+msgid "Katina Link Manager can migrate links from ThirstyAffiliates, Pretty Links, LinkCentral, and Easy Affiliate Links. No compatible data was found on this site."
+msgstr ""
+
+#: views/admin-migration.php:143
+msgid "You can also import links via CSV from the Import / Export tab."
+msgstr ""
+
+#: views/admin-migration.php:146
+msgid "Katina Link Manager detected link data from the following plugins. Migration is non-destructive — your original data is preserved."
+msgstr ""
+
+#: views/admin-migration.php:153
+msgid "Leftover data"
+msgstr ""
+
+#. translators: %d: number of links found in source plugin
+#: views/admin-migration.php:160
+#, php-format
+msgid "%d link found."
+msgid_plural "%d links found."
+msgstr[0] ""
+msgstr[1] ""
+
+#: views/admin-migration.php:169
+#: views/admin-migration.php:196
+msgid "Also scan and update shortcodes/links in post content"
+msgstr ""
+
+#. translators: %s: source plugin name
+#: views/admin-migration.php:176
+#, php-format
+msgid "Migrate from %s"
+msgstr ""
+
+#. translators: %s: source plugin name
+#: views/admin-migration.php:188
+#, php-format
+msgid "The %s plugin is not active, but its data is still in your database. You can either import it into Katina Link Manager or remove it entirely."
+msgstr ""
+
+#: views/admin-migration.php:198
+msgid "Import data"
+msgstr ""
+
+#. translators: %s: source plugin name
+#: views/admin-migration.php:202
+#, php-format
+msgid "This will permanently delete all leftover %s data (posts, tables, options). This cannot be undone. Continue?"
+msgstr ""
+
+#: views/admin-migration.php:205
+msgid "Clean up"
+msgstr ""
+
+#: views/admin-wizard.php:10
+msgid "Welcome to Katina Link Manager"
+msgstr ""
+
+#: views/admin-wizard.php:11
+msgid "Let's get your link manager set up. This will only take a moment."
+msgstr ""
+
+#: views/admin-wizard.php:19
+msgid "Migrate Your Links"
+msgstr ""
+
+#: views/admin-wizard.php:20
+msgid "We detected link data from another plugin. Want to import it?"
+msgstr ""
+
+#. translators: %d: number of links found in source plugin
+#: views/admin-wizard.php:28
+#, php-format
+msgid "%d link found"
+msgid_plural "%d links found"
+msgstr[0] ""
+msgstr[1] ""
+
+#: views/admin-wizard.php:35
+msgid "Skip migration — I'll start fresh"
+msgstr ""
+
+#: views/admin-wizard.php:41
+msgid "Also update shortcodes in existing posts"
+msgstr ""
+
+#. translators: %s: home URL
+#: views/admin-wizard.php:57
+#, php-format
+msgid "Links will be: %s/go/your-link/"
+msgstr ""
+
+#: views/admin-wizard.php:62
+#: views/link-meta-box.php:32
+msgid "Redirect Type"
+msgstr ""
+
+#: views/admin-wizard.php:72
+msgid "Add nofollow"
+msgstr ""
+
+#. translators: %s: site default value (Yes or No)
+#: views/admin-wizard.php:75
+#: views/admin-wizard.php:84
+#: views/link-meta-box.php:51
+#: views/link-meta-box.php:53
+#: views/link-meta-box.php:64
+#: views/link-meta-box.php:66
+#: views/link-meta-box.php:77
+#: views/link-meta-box.php:79
+#: views/link-meta-box.php:90
+#: views/link-meta-box.php:92
+msgid "Yes"
+msgstr ""
+
+#. translators: %s: site default value (Yes or No)
+#: views/admin-wizard.php:76
+#: views/admin-wizard.php:85
+#: views/link-meta-box.php:51
+#: views/link-meta-box.php:54
+#: views/link-meta-box.php:64
+#: views/link-meta-box.php:67
+#: views/link-meta-box.php:77
+#: views/link-meta-box.php:80
+#: views/link-meta-box.php:90
+#: views/link-meta-box.php:93
+msgid "No"
+msgstr ""
+
+#: views/admin-wizard.php:81
+msgid "Open in new window"
+msgstr ""
+
+#: views/admin-wizard.php:92
+msgid "Finish Setup"
+msgstr ""
+
+#: views/admin-wizard.php:93
+msgid "Skip setup"
+msgstr ""
+
+#: views/link-meta-box.php:16
+msgid "Destination URL"
+msgstr ""
+
+#: views/link-meta-box.php:24
+msgid "Copy URL to clipboard"
+msgstr ""
+
+#: views/link-meta-box.php:26
+msgid "Copy"
+msgstr ""
+
+#. translators: %s: site default value (e.g. 307)
+#. translators: %s: site default value (Yes or No)
+#: views/link-meta-box.php:37
+#: views/link-meta-box.php:51
+#: views/link-meta-box.php:64
+#: views/link-meta-box.php:77
+#: views/link-meta-box.php:90
+#, php-format
+msgid "Default (%s)"
+msgstr ""
+
+#: views/link-meta-box.php:46
+msgid "Nofollow"
+msgstr ""
+
+#: views/link-meta-box.php:59
+msgid "Sponsored"
+msgstr ""
+
+#: views/link-meta-box.php:72
+msgid "Open in New Window"
+msgstr ""
+
+#: views/link-meta-box.php:85
+msgid "Pass Query Strings"
+msgstr ""
+
+#: views/link-meta-box.php:98
+msgid "CSS Classes"
+msgstr ""
+
+#: views/link-meta-box.php:99
+msgid "Optional CSS classes"
+msgstr ""
+
+#: views/link-meta-box.php:102
+msgid "Additional Rel Tags"
+msgstr ""
+
+#: views/link-meta-box.php:104
+msgid "e.g. ugc"
+msgstr ""
+
+#: views/link-meta-box.php:105
+msgid "Space-separated. Nofollow and sponsored are handled by their own settings above."
+msgstr ""

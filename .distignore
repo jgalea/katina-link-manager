@@ -1,0 +1,19 @@
+# Files and directories that should not ship to the WordPress.org SVN trunk.
+# Everything here is stripped from the build the deploy action pushes.
+
+/.git
+/.github
+/.gitignore
+/.gitattributes
+/.distignore
+/.wordpress-org
+/README.md
+/docs
+
+# Local working screenshots and drafts (never part of the shipped plugin)
+*.png
+*.jpg
+*.jpeg
+reports-*.md
+wporg-reply-draft.md
+.DS_Store

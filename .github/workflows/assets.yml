@@ -1,0 +1,24 @@
+name: Update wp.org assets & readme
+
+# Pushes banner/icon/screenshots and readme changes to wp.org without cutting
+# a new plugin release. Runs when those files change on the default branch.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wordpress-org/**'
+      - 'readme.txt'
+
+jobs:
+  assets:
+    name: Push assets/readme to wp.org
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: WordPress.org plugin asset/readme update
+        uses: 10up/action-wordpress-plugin-asset-update@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: katina-link-manager
