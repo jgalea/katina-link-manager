@@ -4,7 +4,7 @@ Tags: affiliate links, link management, link cloaking, redirect, link tracking
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,9 @@ Link health monitoring is optional and turned off by default. When you enable it
 5. Guided setup wizard with automatic migration detection.
 
 == Changelog ==
+
+= 1.4.1 =
+* The setup notice can now be dismissed, and it no longer shows once the site has links.
 
 = 1.4.0 =
 * New External Links settings: open links to other sites in a new tab, add nofollow, noreferrer or ugc to them, and exclude domains you trust. Applies to post content and, optionally, comments. Anything already set on a link is kept.
