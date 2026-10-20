@@ -125,7 +125,7 @@ class KATINA_Privacy {
             return;
         }
 
-        $content  = '<p>' . esc_html__( 'This site uses Katina Link Manager to manage and track clicks on outbound links. When you click a managed link the following data may be recorded: the timestamp (UTC), the destination link, the referring page (with query strings stripped), a 2-letter country code derived from your IP, and a one-way hash of your browser user-agent for bot detection. Your IP address is not stored. Click logs older than the configured retention period are automatically deleted.', 'katina-link-manager' ) . '</p>';
+        $content  = '<p>' . esc_html__( 'This site uses Katina Link Manager to manage and track clicks on outbound links. When you click a managed link the following data may be recorded: the timestamp (UTC), the destination link, the referring page (with query strings stripped), a 2-letter country code derived from your IP, a one-way hash of your browser user-agent, and a one-way daily-rotating hash of your IP address and user-agent for bot detection and unique click counts. Your IP address is not stored. Click logs older than the configured retention period are automatically deleted.', 'katina-link-manager' ) . '</p>';
         $content .= '<p>' . esc_html__( 'Katina Link Manager also performs background health checks against the destinations of your managed links. Those destination servers will see periodic requests from this site identifying themselves with a "Katina Link Manager Health Checker" user-agent.', 'katina-link-manager' ) . '</p>';
 
         if ( get_option( 'katinapro_enable_suggestions', 'no' ) === 'yes' || get_option( 'katinapro_enable_content_ai', 'no' ) === 'yes' ) {

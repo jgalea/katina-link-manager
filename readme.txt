@@ -4,7 +4,7 @@ Tags: affiliate links, link management, link cloaking, redirect, link tracking
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.4.1
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,12 @@ Link health monitoring is optional and turned off by default. When you enable it
 5. Guided setup wizard with automatic migration detection.
 
 == Changelog ==
+
+= 1.5.0 =
+* More accurate click counts. Only GET requests are counted, so HEAD checks from uptime monitors and site-management tools no longer register as clicks. Browser prefetch and prerender requests are skipped too. The visitor is still redirected either way.
+* The default excluded-bots list now covers site-management tools, uptime monitors and link checkers (ManageWP, MainWP, Jetpack, WP Umbrella, UptimeRobot, Pingdom and others). Existing sites get the new entries added on update; your own entries are kept.
+* Sweep detection: a visitor who opens three or more different links within five minutes is flagged as a bot, and their clicks in that window are flagged with them. It uses a one-way hash of IP and user-agent with a salt that changes daily. The IP is never stored, and this works with IP collection off.
+* Reports now show unique clicks next to total clicks: one per visitor per link per day.
 
 = 1.4.1 =
 * The setup notice can now be dismissed, and it no longer shows once the site has links.

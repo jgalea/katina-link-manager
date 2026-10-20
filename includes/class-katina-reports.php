@@ -202,6 +202,7 @@ class KATINA_Reports {
         $data = array(
             'filters'   => $filters,
             'total'     => KATINA_Clicks_DB::get_clicks_in_range( $utc_from, $utc_to, $link_id ),
+            'unique'    => KATINA_Clicks_DB::get_unique_clicks_in_range( $utc_from, $utc_to, $link_id ),
             'series'    => self::build_series(
                 KATINA_Clicks_DB::get_clicks_by_hour( $utc_from, $utc_to, $link_id ),
                 $filters['from'],

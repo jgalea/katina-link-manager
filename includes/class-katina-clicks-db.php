@@ -22,11 +22,13 @@ class KATINA_Clicks_DB {
             referrer VARCHAR(2048) DEFAULT '',
             country_code CHAR(2) DEFAULT '',
             user_agent_hash CHAR(32) DEFAULT '',
+            visitor_hash CHAR(16) NOT NULL DEFAULT '',
             is_bot TINYINT(1) DEFAULT 0,
             PRIMARY KEY (id),
             KEY idx_link_id (link_id),
             KEY idx_clicked_at (clicked_at),
-            KEY idx_link_date (link_id, clicked_at)
+            KEY idx_link_date (link_id, clicked_at),
+            KEY idx_visitor (visitor_hash, clicked_at)
         ) {$charset};";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -41,8 +43,37 @@ class KATINA_Clicks_DB {
             '%s',   // referrer
             '%s',   // country_code
             '%s',   // user_agent_hash
+            '%s',   // visitor_hash
             '%d',   // is_bot
         ) );
+    }
+
+    /**
+     * Flags a visitor's clicks as bot when they hit $min_links or more distinct
+     * links since $since, including the click just recorded. Returns true when
+     * it flagged.
+     */
+    public static function flag_sweep( $visitor_hash, $since, $min_links ) {
+        global $wpdb;
+        $table = self::get_table_name();
+
+        $links = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(DISTINCT link_id) FROM {$table} WHERE visitor_hash = %s AND clicked_at >= %s",
+            $visitor_hash,
+            $since
+        ) );
+
+        if ( $links < $min_links ) {
+            return false;
+        }
+
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE {$table} SET is_bot = 1 WHERE visitor_hash = %s AND clicked_at >= %s AND is_bot = 0",
+            $visitor_hash,
+            $since
+        ) );
+
+        return true;
     }
 
     public static function bulk_insert( array $rows ) {
@@ -238,6 +269,38 @@ class KATINA_Clicks_DB {
             $from,
             $to
         ) );
+    }
+
+    /**
+     * Human clicks counted once per visitor per link per UTC day. Rows logged
+     * before visitor hashes existed have no hash to group on, so each counts as
+     * its own click.
+     */
+    public static function get_unique_clicks_in_range( $from, $to, $link_id = 0 ) {
+        global $wpdb;
+        $table    = self::get_table_name();
+        $link_sql = $link_id > 0 ? $wpdb->prepare( ' AND link_id = %d', $link_id ) : '';
+
+        // phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+        $hashed = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM (
+                SELECT 1 FROM {$table}
+                WHERE is_bot = 0 AND visitor_hash != '' AND clicked_at >= %s AND clicked_at < %s{$link_sql}
+                GROUP BY visitor_hash, link_id, SUBSTR(clicked_at, 1, 10)
+             ) u",
+            $from,
+            $to
+        ) );
+
+        $legacy = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table}
+             WHERE is_bot = 0 AND visitor_hash = '' AND clicked_at >= %s AND clicked_at < %s{$link_sql}",
+            $from,
+            $to
+        ) );
+        // phpcs:enable
+
+        return $hashed + $legacy;
     }
 
     public static function get_top_links( $from, $to, $limit = 10 ) {
