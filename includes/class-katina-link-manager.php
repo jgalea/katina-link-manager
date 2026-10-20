@@ -19,6 +19,7 @@ final class Katina_Link_Manager {
     }
 
     private function init_hooks() {
+        KATINA_Upgrader::init();
         add_action( 'init', array( 'KATINA_Post_Type', 'register' ), 0 );
         add_action( 'init', array( 'KATINA_Redirect', 'maybe_redirect_prefixed' ), 1 );
         add_filter( 'robots_txt', array( 'KATINA_Redirect', 'add_robots_disallow' ), 10, 2 );

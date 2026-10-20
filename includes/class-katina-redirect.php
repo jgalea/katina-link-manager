@@ -113,7 +113,7 @@ class KATINA_Redirect {
         nocache_headers();
 
         $redirect_type = $link->get_redirect_type();
-        $track         = 'yes' === get_option( 'katina_enable_click_tracking', 'yes' );
+        $track         = 'yes' === get_option( 'katina_enable_click_tracking', 'yes' ) && self::is_countable_request();
 
         // Send the visitor to the destination first, then record the click once
         // the response is flushed, so the DB write stays off the redirect's
@@ -135,6 +135,26 @@ class KATINA_Redirect {
         }
         wp_redirect( $destination, $redirect_type );
         exit;
+    }
+
+    // Only a GET that isn't a browser prefetch/prerender is a visitor clicking. HEAD checks and speculative loads still get the redirect.
+    private static function is_countable_request() {
+        $method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) ) : 'GET';
+        if ( 'GET' !== $method ) {
+            return false;
+        }
+
+        foreach ( array( 'HTTP_SEC_PURPOSE', 'HTTP_PURPOSE', 'HTTP_X_MOZ' ) as $header ) {
+            if ( empty( $_SERVER[ $header ] ) ) {
+                continue;
+            }
+            $value = strtolower( sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) ) );
+            if ( preg_match( '/prefetch|prerender|preview/', $value ) ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static function record_click( KATINA_Link $link ) {

@@ -83,9 +83,10 @@ foreach ( array_values( $series ) as $i => $point ) {
     <p class="katina-reports-summary">
         <?php
         printf(
-            /* translators: 1: click count, 2: start date, 3: end date */
-            esc_html__( '%1$s clicks from %2$s to %3$s (bots excluded).', 'katina-link-manager' ),
+            /* translators: 1: click count, 2: unique click count, 3: start date, 4: end date */
+            esc_html__( '%1$s clicks, %2$s unique, from %3$s to %4$s (bots excluded). Unique counts one click per visitor per link per day.', 'katina-link-manager' ),
             '<strong>' . esc_html( number_format_i18n( $data['total'] ) ) . '</strong>',
+            '<strong>' . esc_html( number_format_i18n( $data['unique'] ) ) . '</strong>',
             esc_html( $filters['from'] ),
             esc_html( $filters['to'] )
         );

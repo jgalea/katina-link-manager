@@ -112,14 +112,14 @@ class KATINA_Activator {
             'katina_disable_ip_collection' => 'yes',
             'katina_enable_link_fixer'     => 'yes',
             'katina_enable_link_health'    => 'no',
-            'katina_excluded_bots'         => "googlebot\nbingbot\nslurp\nduckduckbot\nbaiduspider\nyandexbot\nsogou\nexabot\nia_archiver\nfacebot\nahrefs\nsemrush\nmj12bot\ndotbot\npetalbot",
+            'katina_excluded_bots'         => KATINA_Bot_Detector::default_list(),
         );
         foreach ( $defaults as $key => $value ) {
             if ( get_option( $key ) === false ) {
                 add_option( $key, $value );
             }
         }
-        add_option( 'katina_db_version', '1.0' );
+        add_option( 'katina_db_version', KATINA_Upgrader::DB_VERSION );
         add_option( 'katina_installed_version', KATINA_VERSION );
     }
 }

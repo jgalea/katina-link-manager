@@ -5,6 +5,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_Clicks {
 
+    const SWEEP_LINKS  = 3;
+    const SWEEP_WINDOW = 300;
+
     public static function record( KATINA_Link $link ) {
         $user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
         $is_bot     = KATINA_Bot_Detector::is_bot( $user_agent );
@@ -25,14 +28,31 @@ class KATINA_Clicks {
         $ua_hash      = $user_agent ? md5( $user_agent ) : '';
         $country_code = self::detect_country();
 
+        $visitor_hash = self::visitor_hash( $user_agent );
+
         KATINA_Clicks_DB::insert( array(
             'link_id'         => $link->get_id(),
             'clicked_at'      => current_time( 'mysql', true ),
             'referrer'        => $referrer,
             'country_code'    => $country_code,
             'user_agent_hash' => $ua_hash,
+            'visitor_hash'    => $visitor_hash,
             'is_bot'          => $is_bot ? 1 : 0,
         ) );
+
+        if ( '' !== $visitor_hash ) {
+            KATINA_Clicks_DB::flag_sweep( $visitor_hash, gmdate( 'Y-m-d H:i:s', time() - self::SWEEP_WINDOW ), self::SWEEP_LINKS );
+        }
+    }
+
+    // One-way hash of IP + UA under a salt that changes daily, so it can group one visitor's clicks within a day and nothing longer. The IP is hashed here and never stored, whatever the IP collection setting says.
+    private static function visitor_hash( $user_agent ) {
+        $ip = self::get_client_ip();
+        if ( '' === $ip && '' === $user_agent ) {
+            return '';
+        }
+
+        return substr( hash_hmac( 'sha256', $ip . '|' . $user_agent, wp_salt( 'auth' ) . gmdate( 'Y-m-d' ) ), 0, 16 );
     }
 
     private static function detect_country() {

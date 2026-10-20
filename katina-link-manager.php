@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Katina Link Manager
  * Description: Manage, cloak, track, and optimize your outbound links from one place.
- * Version: 1.4.1
+ * Version: 1.5.0
  * Requires at least: 6.2
  * Requires PHP: 8.0
  * Author: RebelCode
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'KATINA_VERSION', '1.4.1' );
+define( 'KATINA_VERSION', '1.5.0' );
 define( 'KATINA_PLUGIN_FILE', __FILE__ );
 define( 'KATINA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'KATINA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
