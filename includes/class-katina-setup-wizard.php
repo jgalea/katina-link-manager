@@ -14,6 +14,7 @@ class KATINA_Setup_Wizard {
         add_action( 'admin_init', array( __CLASS__, 'maybe_redirect' ) );
         add_action( 'admin_post_katina_wizard_save', array( __CLASS__, 'handle_save' ) );
         add_action( 'admin_notices', array( __CLASS__, 'setup_notice' ) );
+        add_action( 'admin_post_katina_dismiss_setup_notice', array( __CLASS__, 'dismiss_notice' ) );
     }
 
     public static function add_page() {
@@ -50,13 +51,37 @@ class KATINA_Setup_Wizard {
         exit;
     }
 
+    public static function dismiss_notice() {
+        check_admin_referer( 'katina_dismiss_setup_notice' );
+
+        update_user_meta( get_current_user_id(), 'katina_setup_notice_dismissed', 1 );
+
+        $back = wp_get_referer();
+        wp_safe_redirect( $back ? $back : admin_url() );
+        exit;
+    }
+
     public static function setup_notice() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        if ( get_user_meta( get_current_user_id(), 'katina_setup_notice_dismissed', true ) ) {
+            return;
+        }
+
+        $links = wp_count_posts( 'katina_link' );
+        if ( $links && ( (int) $links->publish + (int) $links->draft + (int) $links->private ) > 0 ) {
+            return;
+        }
+
         $screen = get_current_screen();
         if ( $screen && $screen->id === 'admin_page_katina-setup' ) {
             return;
         }
 
-        $wizard_url = admin_url( 'admin.php?page=katina-setup' );
+        $wizard_url  = admin_url( 'admin.php?page=katina-setup' );
+        $dismiss_url = wp_nonce_url( admin_url( 'admin-post.php?action=katina_dismiss_setup_notice' ), 'katina_dismiss_setup_notice' );
         ?>
         <div class="notice notice-info">
             <p>
@@ -67,6 +92,7 @@ class KATINA_Setup_Wizard {
                     '<a href="' . esc_url( $wizard_url ) . '">' . esc_html__( 'setup wizard', 'katina-link-manager' ) . '</a>'
                 );
                 ?>
+                <a href="<?php echo esc_url( $dismiss_url ); ?>"><?php esc_html_e( 'Dismiss', 'katina-link-manager' ); ?></a>
             </p>
         </div>
         <?php
