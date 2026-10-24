@@ -12,6 +12,7 @@ class KATINA_Settings {
         add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
         add_action( 'update_option_katina_link_prefix', array( __CLASS__, 'schedule_rewrite_flush' ) );
         add_action( 'update_option_katina_enable_link_health', array( __CLASS__, 'on_link_health_toggle' ), 10, 2 );
+        add_action( 'add_option_katina_enable_link_health', array( __CLASS__, 'on_link_health_added' ), 10, 2 );
         add_action( 'init', array( __CLASS__, 'maybe_flush_rewrites' ), 99 );
     }
 
@@ -49,6 +50,11 @@ class KATINA_Settings {
         } else {
             KATINA_Link_Health::unschedule();
         }
+    }
+
+    // update_option() on a missing option goes through add_option(), which skips the update hook.
+    public static function on_link_health_added( $option, $value ) {
+        self::on_link_health_toggle( null, $value );
     }
 
     public static function get_tabs() {
