@@ -4,7 +4,7 @@ Tags: affiliate links, link management, link cloaking, redirect, link tracking
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,11 @@ Link health monitoring is optional and turned off by default. When you enable it
 5. Guided setup wizard with automatic migration detection.
 
 == Changelog ==
+
+= 1.5.1 =
+* Fixed: the Katina link button now shows in the classic editor toolbar.
+* Fixed: turning on Link Health Checks for the first time now schedules the background checks.
+* Fixed: the dashboard shows how often link checks really run (every 12 hours) instead of saying hourly.
 
 = 1.5.0 =
 * More accurate click counts. Only GET requests are counted, so HEAD checks from uptime monitors and site-management tools no longer register as clicks. Browser prefetch and prerender requests are skipped too. The visitor is still redirected either way.
