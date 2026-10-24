@@ -8,6 +8,7 @@ class KATINA_Editor {
     public static function init() {
         add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'enqueue_block_editor' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_classic_editor' ) );
+        add_filter( 'mce_buttons', array( __CLASS__, 'add_toolbar_button' ) );
         add_action( 'wp_ajax_katina_search_links', array( __CLASS__, 'ajax_search_links' ) );
     }
 
@@ -24,6 +25,11 @@ class KATINA_Editor {
             'ajaxUrl' => admin_url( 'admin-ajax.php' ),
             'nonce'   => wp_create_nonce( 'katina_editor' ),
         ) );
+    }
+
+    public static function add_toolbar_button( $buttons ) {
+        $buttons[] = 'katina-link-manager';
+        return $buttons;
     }
 
     public static function enqueue_classic_editor( $hook ) {

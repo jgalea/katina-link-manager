@@ -101,7 +101,20 @@ $top_links = $wpdb->get_results( $wpdb->prepare(
         <?php wp_nonce_field( 'katina_check_health_now' ); ?>
         <input type="hidden" name="action" value="katina_check_health_now" />
         <?php submit_button( __( 'Recheck All Links Now', 'katina-link-manager' ), 'secondary', 'submit', false ); ?>
-        <span class="katina-form-hint"><?php esc_html_e( 'Background checks run hourly and stagger across the week.', 'katina-link-manager' ); ?></span>
+        <?php
+        $schedules  = wp_get_schedules();
+        $recurrence = wp_get_schedule( KATINA_Link_Health::CRON_HOOK );
+        ?>
+        <span class="katina-form-hint">
+            <?php
+            if ( $recurrence && isset( $schedules[ $recurrence ]['interval'] ) ) {
+                /* translators: %s: interval between background checks, e.g. "12 hours" */
+                printf( esc_html__( 'Background checks run every %s and stagger across the week.', 'katina-link-manager' ), esc_html( human_time_diff( 0, $schedules[ $recurrence ]['interval'] ) ) );
+            } else {
+                esc_html_e( 'Background checks stagger across the week.', 'katina-link-manager' );
+            }
+            ?>
+        </span>
     </form>
     <?php endif; ?>
 
