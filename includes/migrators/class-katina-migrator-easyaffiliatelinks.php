@@ -36,6 +36,7 @@ class KATINA_Migrator_EasyAffiliateLinks extends KATINA_Migrator {
     }
 
     public function run() {
+        self::register_source_taxonomy( 'eafl_category', 'easy_affiliate_link' );
         $posts = get_posts( array(
             'post_type'      => 'easy_affiliate_link',
             'post_status'    => array( 'publish', 'draft', 'private' ),

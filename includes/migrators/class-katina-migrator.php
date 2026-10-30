@@ -106,6 +106,18 @@ abstract class KATINA_Migrator {
         return $results;
     }
 
+    // Callers can import while the source plugin is inactive, as long as its data is still there.
+    public static function can_migrate() {
+        return static::is_available() || static::has_orphaned_data();
+    }
+
+    // A deactivated source plugin leaves its taxonomy unregistered, and term lookups then fail.
+    protected static function register_source_taxonomy( $taxonomy, $post_type ) {
+        if ( ! taxonomy_exists( $taxonomy ) ) {
+            register_taxonomy( $taxonomy, $post_type, array( 'public' => false, 'rewrite' => false, 'query_var' => false ) );
+        }
+    }
+
     protected static function cpt_has_posts( $post_type ) {
         global $wpdb;
         return (int) $wpdb->get_var( $wpdb->prepare(

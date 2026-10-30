@@ -122,7 +122,7 @@ class KATINA_Setup_Wizard {
 
         foreach ( $migrators as $slug => $data ) {
             $class = $data['class'];
-            if ( $class::is_available() ) {
+            if ( $class::can_migrate() ) {
                 $detected[ $slug ] = array(
                     'name'  => $data['name'],
                     'count' => $class::get_source_count(),

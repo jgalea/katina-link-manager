@@ -37,6 +37,7 @@ class KATINA_Migrator_LinkCentral extends KATINA_Migrator {
 	}
 
 	public function run() {
+		self::register_source_taxonomy( 'linkcentral_category', 'linkcentral_link' );
 		$this->migrate_categories();
 		$this->migrate_links();
 		$this->migrate_clicks();

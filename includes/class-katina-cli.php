@@ -123,7 +123,7 @@ class KATINA_CLI {
         }
 
         $class = $map[ $source ];
-        if ( ! $class::is_available() ) {
+        if ( ! $class::can_migrate() ) {
             WP_CLI::error( "No {$source} data found on this site." );
         }
 

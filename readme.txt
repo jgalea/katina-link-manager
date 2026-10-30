@@ -4,7 +4,7 @@ Tags: affiliate links, link management, link cloaking, redirect, link tracking
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.5.1
+Stable tag: 1.5.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,9 @@ Link health monitoring is optional and turned off by default. When you enable it
 5. Guided setup wizard with automatic migration detection.
 
 == Changelog ==
+
+= 1.5.2 =
+* Fixed: you can now import from ThirstyAffiliates, Easy Affiliate Links or LinkCentral after deactivating them. The WP-CLI command and setup wizard used to refuse, and link categories were skipped.
 
 = 1.5.1 =
 * Fixed: the Katina link button now shows in the classic editor toolbar.

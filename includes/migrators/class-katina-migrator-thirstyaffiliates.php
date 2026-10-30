@@ -52,6 +52,7 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
     }
 
     public function run() {
+        self::register_source_taxonomy( 'thirstylink-category', 'thirstylink' );
         $this->globals = $this->read_globals();
         $had_links     = $this->katina_has_links();
 
