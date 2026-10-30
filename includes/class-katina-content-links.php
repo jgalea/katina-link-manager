@@ -35,6 +35,9 @@ class KATINA_Content_Links {
             return $content;
         }
 
+        $post = $managed ? get_post() : null;
+        $page = $post ? sanitize_title( $post->post_name ) : '';
+
         $tags = new WP_HTML_Tag_Processor( $content );
         while ( $tags->next_tag( 'a' ) ) {
             $href = $tags->get_attribute( 'href' );
@@ -53,6 +56,9 @@ class KATINA_Content_Links {
                 }
                 $add_rel = preg_split( '/\s+/', $link->get_rel_tags(), -1, PREG_SPLIT_NO_EMPTY );
                 $new_tab = $link->opens_new_window();
+                if ( '' !== $page && '' !== $link->get_sub_id_param() ) {
+                    $tags->set_attribute( 'href', add_query_arg( KATINA_Link::PAGE_PARAM, $page, $href ) );
+                }
             } elseif ( $external && ! self::is_excluded( $host ) ) {
                 $add_rel = $ext_rel;
                 $new_tab = $ext_new_tab;

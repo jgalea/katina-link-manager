@@ -55,7 +55,18 @@ class KATINA_Clicks {
         return substr( hash_hmac( 'sha256', $ip . '|' . $user_agent, wp_salt( 'auth' ) . gmdate( 'Y-m-d' ) ), 0, 16 );
     }
 
-    private static function detect_country() {
+    public static function detect_country() {
+        // A CDN-supplied country code carries no IP, so it's read even when IP collection is off.
+        foreach ( array( 'HTTP_CF_IPCOUNTRY', 'HTTP_GEOIP_COUNTRY_CODE', 'HTTP_CLOUDFRONT_VIEWER_COUNTRY' ) as $header ) {
+            if ( empty( $_SERVER[ $header ] ) ) {
+                continue;
+            }
+            $code = strtoupper( sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) ) );
+            if ( preg_match( '/^[A-Z]{2}$/', $code ) && ! in_array( $code, array( 'XX', 'T1' ), true ) ) {
+                return $code;
+            }
+        }
+
         // Honor the GDPR toggle: when IP collection is disabled, skip every
         // header read so no IP is touched, looked up, or potentially logged.
         if ( get_option( 'katina_disable_ip_collection', 'yes' ) === 'yes' ) {

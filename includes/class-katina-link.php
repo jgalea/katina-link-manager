@@ -17,7 +17,13 @@ class KATINA_Link {
         'css_classes'        => '_katina_css_classes',
         'pass_query_str'     => '_katina_pass_query_str',
         'rel_tags'           => '_katina_rel_tags',
+        'sub_id_param'       => '_katina_sub_id_param',
+        'geo_countries'      => '_katina_geo_countries',
+        'geo_fallback_url'   => '_katina_geo_fallback_url',
     );
+
+    // Set on cloaked links in post content so a link knows which page it was clicked on.
+    const PAGE_PARAM = 'ksrc';
 
     const SOURCE_META = '_katina_source_id';
 
@@ -95,6 +101,20 @@ class KATINA_Link {
         return $val === 'yes';
     }
 
+    public function get_sub_id_param() {
+        return preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) get_post_meta( $this->id, self::META_KEYS['sub_id_param'], true ) );
+    }
+
+    public function get_geo_fallback_url() {
+        $url = (string) get_post_meta( $this->id, self::META_KEYS['geo_fallback_url'], true );
+        return self::is_safe_destination( $url ) ? $url : '';
+    }
+
+    public function is_geo_excluded( $country ) {
+        $list = preg_split( '/[\s,]+/', strtoupper( (string) get_post_meta( $this->id, self::META_KEYS['geo_countries'], true ) ), -1, PREG_SPLIT_NO_EMPTY );
+        return '' !== $country && in_array( $country, $list, true );
+    }
+
     public function get_rel_tags() {
         $tags = array();
         if ( $this->is_nofollow() ) {
@@ -122,6 +142,7 @@ class KATINA_Link {
         if ( $this->passes_query_string() && $request_query_string ) {
             // Use add_query_arg so query merging is safe instead of naive concat.
             parse_str( $request_query_string, $passed );
+            unset( $passed[ self::PAGE_PARAM ] );
             if ( ! empty( $passed ) ) {
                 $url = add_query_arg( urlencode_deep( $passed ), $url );
             }
@@ -145,7 +166,7 @@ class KATINA_Link {
         foreach ( self::META_KEYS as $key => $meta_key ) {
             if ( isset( $data[ $key ] ) ) {
                 // sanitize_text_field() strips percent-encoded octets, which breaks affiliate URLs.
-                $value = 'destination_url' === $key
+                $value = in_array( $key, array( 'destination_url', 'geo_fallback_url' ), true )
                     ? esc_url_raw( $data[ $key ], array( 'http', 'https' ) )
                     : sanitize_text_field( $data[ $key ] );
                 update_post_meta( $this->id, $meta_key, $value );

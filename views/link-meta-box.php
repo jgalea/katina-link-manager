@@ -10,6 +10,9 @@ $new_window    = get_post_meta( $link->get_id(), '_katina_new_window', true ) ?:
 $pass_qs       = get_post_meta( $link->get_id(), '_katina_pass_query_str', true ) ?: 'default';
 $css_classes   = $link->get_css_classes();
 $rel_tags      = get_post_meta( $link->get_id(), '_katina_rel_tags', true );
+$sub_id_param  = get_post_meta( $link->get_id(), '_katina_sub_id_param', true );
+$geo_countries = get_post_meta( $link->get_id(), '_katina_geo_countries', true );
+$geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', true );
 ?>
 <table class="form-table katina-meta-box">
     <tr>
@@ -104,5 +107,23 @@ $rel_tags      = get_post_meta( $link->get_id(), '_katina_rel_tags', true );
             <input type="text" id="katina_rel_tags" name="katina_rel_tags" value="<?php echo esc_attr( $rel_tags ); ?>" class="widefat" placeholder="<?php esc_attr_e( 'e.g. ugc', 'katina-link-manager' ); ?>" />
             <p class="description"><?php esc_html_e( 'Space-separated. Nofollow and sponsored are handled by their own settings above.', 'katina-link-manager' ); ?></p>
         </td>
+    </tr>
+    <tr class="katina-field-group">
+        <th><label for="katina_sub_id_param"><?php esc_html_e( 'Sub-ID Parameter', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="text" id="katina_sub_id_param" name="katina_sub_id_param" value="<?php echo esc_attr( $sub_id_param ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. sub_id', 'katina-link-manager' ); ?>" />
+            <p class="description"><?php esc_html_e( 'Adds the slug of the page the link was clicked on to the destination under this parameter name, so your affiliate network can report per page. Links in post content are tagged automatically.', 'katina-link-manager' ); ?></p>
+        </td>
+    </tr>
+    <tr>
+        <th><label for="katina_geo_countries"><?php esc_html_e( 'Excluded Countries', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="text" id="katina_geo_countries" name="katina_geo_countries" value="<?php echo esc_attr( $geo_countries ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. PT, ES', 'katina-link-manager' ); ?>" />
+            <p class="description"><?php esc_html_e( 'Two-letter country codes. Visitors from these countries go to the fallback URL below instead. Needs a CDN or host that supplies the visitor country.', 'katina-link-manager' ); ?></p>
+        </td>
+    </tr>
+    <tr>
+        <th><label for="katina_geo_fallback_url"><?php esc_html_e( 'Fallback URL', 'katina-link-manager' ); ?></label></th>
+        <td><input type="url" id="katina_geo_fallback_url" name="katina_geo_fallback_url" value="<?php echo esc_url( $geo_fallback ); ?>" class="widefat" placeholder="https://" /></td>
     </tr>
 </table>
