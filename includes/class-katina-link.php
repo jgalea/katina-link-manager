@@ -25,6 +25,9 @@ class KATINA_Link {
     // Set on cloaked links in post content so a link knows which page it was clicked on.
     const PAGE_PARAM = 'ksrc';
 
+    // A destination containing this token gets the page slug there, with hyphens as underscores.
+    const PAGE_TOKEN = '[page]';
+
     const SOURCE_META = '_katina_source_id';
 
     const LAST_CLICK_META = '_katina_source_last_click_id';
@@ -105,6 +108,10 @@ class KATINA_Link {
         return preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) get_post_meta( $this->id, self::META_KEYS['sub_id_param'], true ) );
     }
 
+    public function wants_page() {
+        return '' !== $this->get_sub_id_param() || false !== strpos( (string) $this->get_destination_url(), self::PAGE_TOKEN );
+    }
+
     public function get_geo_fallback_url() {
         $url = (string) get_post_meta( $this->id, self::META_KEYS['geo_fallback_url'], true );
         return self::is_safe_destination( $url ) ? $url : '';
@@ -137,8 +144,8 @@ class KATINA_Link {
         return KATINA_Post_Type::get_link_url( $this->id );
     }
 
-    public function get_final_destination_url( $request_query_string = '' ) {
-        $url = $this->get_destination_url();
+    public function get_final_destination_url( $request_query_string = '', $page = '' ) {
+        $url = str_replace( self::PAGE_TOKEN, strtr( $page, '-', '_' ), (string) $this->get_destination_url() );
         if ( $this->passes_query_string() && $request_query_string ) {
             // Use add_query_arg so query merging is safe instead of naive concat.
             parse_str( $request_query_string, $passed );

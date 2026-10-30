@@ -56,7 +56,7 @@ class KATINA_Content_Links {
                 }
                 $add_rel = preg_split( '/\s+/', $link->get_rel_tags(), -1, PREG_SPLIT_NO_EMPTY );
                 $new_tab = $link->opens_new_window();
-                if ( '' !== $page && '' !== $link->get_sub_id_param() ) {
+                if ( '' !== $page && $link->wants_page() ) {
                     $tags->set_attribute( 'href', add_query_arg( KATINA_Link::PAGE_PARAM, $page, $href ) );
                 }
             } elseif ( $external && ! self::is_excluded( $host ) ) {

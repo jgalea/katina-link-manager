@@ -100,13 +100,14 @@ class KATINA_Redirect {
     private static function do_redirect( KATINA_Link $link ) {
         // parse_str() in get_final_destination_url() does the parsing; sanitize_text_field() would strip %XX octets.
         $query_string = isset( $_SERVER['QUERY_STRING'] ) ? wp_unslash( $_SERVER['QUERY_STRING'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        $destination  = $link->get_final_destination_url( $query_string );
+        $page         = isset( $_GET[ KATINA_Link::PAGE_PARAM ] ) ? substr( sanitize_title( wp_unslash( $_GET[ KATINA_Link::PAGE_PARAM ] ) ), 0, 60 ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $destination  = $link->get_final_destination_url( $query_string, $page );
 
         $fallback = $link->get_geo_fallback_url();
         if ( '' !== $fallback && $link->is_geo_excluded( KATINA_Clicks::detect_country() ) ) {
             $destination = $fallback;
-        } else {
-            $destination = self::add_sub_id( $link, $destination );
+        } elseif ( '' !== $page && '' !== $link->get_sub_id_param() && $destination ) {
+            $destination = add_query_arg( $link->get_sub_id_param(), $page, $destination );
         }
 
         if ( ! $destination || ! KATINA_Link::is_safe_destination( $destination ) ) {
@@ -142,16 +143,6 @@ class KATINA_Redirect {
         }
         wp_redirect( $destination, $redirect_type );
         exit;
-    }
-
-    // Tags the destination with the page the link was clicked on, under the parameter name the operator's tracker reads.
-    private static function add_sub_id( KATINA_Link $link, $destination ) {
-        $param = $link->get_sub_id_param();
-        $page  = isset( $_GET[ KATINA_Link::PAGE_PARAM ] ) ? substr( sanitize_title( wp_unslash( $_GET[ KATINA_Link::PAGE_PARAM ] ) ), 0, 60 ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( '' === $param || '' === $page || ! $destination ) {
-            return $destination;
-        }
-        return add_query_arg( $param, $page, $destination );
     }
 
     // Only a GET that isn't a browser prefetch/prerender is a visitor clicking. HEAD checks and speculative loads still get the redirect.
