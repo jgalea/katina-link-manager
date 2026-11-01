@@ -15,6 +15,8 @@ class KATINA_Privacy {
 
     const RETENTION_HOOK = 'katina_clicks_retention_cron';
 
+    const DEFAULT_RETENTION_DAYS = 90;
+
     public static function init() {
         add_filter( 'wp_privacy_personal_data_exporters', array( __CLASS__, 'register_exporter' ) );
         add_filter( 'wp_privacy_personal_data_erasers', array( __CLASS__, 'register_eraser' ) );
@@ -37,7 +39,7 @@ class KATINA_Privacy {
     }
 
     public static function run_retention() {
-        $days = (int) get_option( 'katina_clicks_retention_days', 365 );
+        $days = (int) get_option( 'katina_clicks_retention_days', self::DEFAULT_RETENTION_DAYS );
         if ( $days < 1 ) {
             return;
         }
@@ -72,7 +74,7 @@ class KATINA_Privacy {
 
         if ( $domain ) {
             $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT id, link_id, clicked_at, referrer, country_code FROM {$table}
+                "SELECT id, click_id, link_id, clicked_at, source_page, referrer, country_code FROM {$table}
                  WHERE referrer LIKE %s LIMIT 200 OFFSET %d",
                 '%' . $wpdb->esc_like( $domain ) . '%',
                 ( $page - 1 ) * 200
@@ -86,6 +88,8 @@ class KATINA_Privacy {
                     'data'        => array(
                         array( 'name' => __( 'Link ID', 'katina-link-manager' ),     'value' => (int) $row->link_id ),
                         array( 'name' => __( 'Clicked at', 'katina-link-manager' ),  'value' => $row->clicked_at ),
+                        array( 'name' => __( 'Click ID', 'katina-link-manager' ),    'value' => $row->click_id ),
+                        array( 'name' => __( 'Source page', 'katina-link-manager' ), 'value' => $row->source_page ),
                         array( 'name' => __( 'Referrer', 'katina-link-manager' ),    'value' => $row->referrer ),
                         array( 'name' => __( 'Country code', 'katina-link-manager' ), 'value' => $row->country_code ),
                     ),
@@ -125,7 +129,8 @@ class KATINA_Privacy {
             return;
         }
 
-        $content  = '<p>' . esc_html__( 'This site uses Katina Link Manager to manage and track clicks on outbound links. When you click a managed link the following data may be recorded: the timestamp (UTC), the destination link, the referring page (with query strings stripped), a 2-letter country code derived from your IP, a one-way hash of your browser user-agent, and a one-way daily-rotating hash of your IP address and user-agent for bot detection and unique click counts. Your IP address is not stored. Click logs older than the configured retention period are automatically deleted.', 'katina-link-manager' ) . '</p>';
+        $content  = '<p>' . esc_html__( 'This site uses Katina Link Manager to manage and track clicks on outbound links. When you click a managed link the following data may be recorded: the timestamp (UTC), the destination link, a random click ID, the page on this site the link was clicked on, the referring page (with query strings stripped), a 2-letter country code derived from your IP, a one-way hash of your browser user-agent, and a one-way daily-rotating hash of your IP address and user-agent for bot detection and unique click counts. Your IP address and raw user-agent are not stored. Click logs older than the configured retention period are automatically deleted.', 'katina-link-manager' ) . '</p>';
+        $content .= '<p>' . esc_html__( 'For links set up to do so, the click ID is also passed to the destination site, so a partner such as an affiliate network can report which click led to a sign-up or sale. The click ID is random and contains no information about you.', 'katina-link-manager' ) . '</p>';
         $content .= '<p>' . esc_html__( 'Katina Link Manager also performs background health checks against the destinations of your managed links. Those destination servers will see periodic requests from this site identifying themselves with a "Katina Link Manager Health Checker" user-agent.', 'katina-link-manager' ) . '</p>';
 
         if ( get_option( 'katinapro_enable_suggestions', 'no' ) === 'yes' || get_option( 'katinapro_enable_content_ai', 'no' ) === 'yes' ) {

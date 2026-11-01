@@ -199,7 +199,7 @@ class KATINA_Admin {
             update_post_meta( $post_id, '_katina_geo_fallback_url', KATINA_Link::is_safe_destination( $fallback ) ? $fallback : '' );
         }
 
-        $text_fields = array( 'redirect_type', 'nofollow', 'sponsored', 'new_window', 'pass_query_str', 'css_classes', 'rel_tags', 'sub_id_param', 'geo_countries' );
+        $text_fields = array( 'redirect_type', 'nofollow', 'sponsored', 'new_window', 'pass_query_str', 'css_classes', 'rel_tags', 'sub_id_param', 'click_id_param', 'geo_countries' );
         foreach ( $text_fields as $field ) {
             $post_key = 'katina_' . $field;
             if ( isset( $_POST[ $post_key ] ) ) {

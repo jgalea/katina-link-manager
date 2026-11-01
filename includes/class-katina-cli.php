@@ -130,7 +130,7 @@ class KATINA_CLI {
         $dry_run = (bool) WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
         $adopt   = WP_CLI\Utils\get_flag_value( $assoc_args, 'adopt-prefix', false ) ? true : 'auto';
 
-        $retention = (int) get_option( 'katina_clicks_retention_days', 365 );
+        $retention = (int) get_option( 'katina_clicks_retention_days', KATINA_Privacy::DEFAULT_RETENTION_DAYS );
         if ( $retention > 0 ) {
             WP_CLI::warning( sprintf(
                 'Click retention is %d days. Imported clicks older than that are deleted by the daily cleanup. Run `wp option update katina_clicks_retention_days 0` first to keep the full history.',

@@ -8,7 +8,7 @@ class KATINA_Clicks {
     const SWEEP_LINKS  = 3;
     const SWEEP_WINDOW = 300;
 
-    public static function record( KATINA_Link $link ) {
+    public static function record( KATINA_Link $link, $click_id = '', $page = '' ) {
         $user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
         $is_bot     = KATINA_Bot_Detector::is_bot( $user_agent );
         $referrer   = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
@@ -19,6 +19,12 @@ class KATINA_Clicks {
             $parts    = wp_parse_url( $referrer );
             $referrer = ( isset( $parts['scheme'], $parts['host'] ) ? $parts['scheme'] . '://' . $parts['host'] : '' )
                       . ( isset( $parts['path'] ) ? $parts['path'] : '' );
+        }
+
+        // The page slug content links carry; without one, the path of a referrer on this site.
+        $source_page = $page;
+        if ( '' === $source_page && $referrer && wp_parse_url( $referrer, PHP_URL_HOST ) === wp_parse_url( home_url(), PHP_URL_HOST ) ) {
+            $source_page = (string) wp_parse_url( $referrer, PHP_URL_PATH );
         }
 
         if ( strlen( $referrer ) > 2048 ) {
@@ -38,6 +44,8 @@ class KATINA_Clicks {
             'user_agent_hash' => $ua_hash,
             'visitor_hash'    => $visitor_hash,
             'is_bot'          => $is_bot ? 1 : 0,
+            'click_id'        => $click_id,
+            'source_page'     => substr( $source_page, 0, 200 ),
         ) );
 
         if ( '' !== $visitor_hash ) {

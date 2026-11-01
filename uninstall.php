@@ -24,6 +24,7 @@ if ( $terms ) {
 
 // Unschedule health check cron
 wp_clear_scheduled_hook( 'katina_health_check_cron' );
+wp_clear_scheduled_hook( 'katina_clicks_retention_cron' );
 
 // Drop plugin tables
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}katina_clicks" );

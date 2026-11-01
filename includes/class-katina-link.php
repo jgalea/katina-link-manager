@@ -18,6 +18,7 @@ class KATINA_Link {
         'pass_query_str'     => '_katina_pass_query_str',
         'rel_tags'           => '_katina_rel_tags',
         'sub_id_param'       => '_katina_sub_id_param',
+        'click_id_param'     => '_katina_click_id_param',
         'geo_countries'      => '_katina_geo_countries',
         'geo_fallback_url'   => '_katina_geo_fallback_url',
     );
@@ -27,6 +28,9 @@ class KATINA_Link {
 
     // A destination containing this token gets the page slug there, with hyphens as underscores.
     const PAGE_TOKEN = '[page]';
+
+    // A destination containing this token gets the logged click's ID there.
+    const CLICK_TOKEN = '[click]';
 
     const SOURCE_META = '_katina_source_id';
 
@@ -108,6 +112,10 @@ class KATINA_Link {
         return preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) get_post_meta( $this->id, self::META_KEYS['sub_id_param'], true ) );
     }
 
+    public function get_click_id_param() {
+        return preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) get_post_meta( $this->id, self::META_KEYS['click_id_param'], true ) );
+    }
+
     public function wants_page() {
         return '' !== $this->get_sub_id_param() || false !== strpos( (string) $this->get_destination_url(), self::PAGE_TOKEN );
     }
@@ -144,8 +152,12 @@ class KATINA_Link {
         return KATINA_Post_Type::get_link_url( $this->id );
     }
 
-    public function get_final_destination_url( $request_query_string = '', $page = '' ) {
-        $url = str_replace( self::PAGE_TOKEN, strtr( $page, '-', '_' ), (string) $this->get_destination_url() );
+    public function get_final_destination_url( $request_query_string = '', $page = '', $click_id = '' ) {
+        $url = str_replace(
+            array( self::PAGE_TOKEN, self::CLICK_TOKEN ),
+            array( strtr( $page, '-', '_' ), $click_id ),
+            (string) $this->get_destination_url()
+        );
         if ( $this->passes_query_string() && $request_query_string ) {
             // Use add_query_arg so query merging is safe instead of naive concat.
             parse_str( $request_query_string, $passed );

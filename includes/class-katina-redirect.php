@@ -101,13 +101,21 @@ class KATINA_Redirect {
         // parse_str() in get_final_destination_url() does the parsing; sanitize_text_field() would strip %XX octets.
         $query_string = isset( $_SERVER['QUERY_STRING'] ) ? wp_unslash( $_SERVER['QUERY_STRING'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $page         = isset( $_GET[ KATINA_Link::PAGE_PARAM ] ) ? substr( sanitize_title( wp_unslash( $_GET[ KATINA_Link::PAGE_PARAM ] ) ), 0, 60 ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        $destination  = $link->get_final_destination_url( $query_string, $page );
+        $track        = 'yes' === get_option( 'katina_enable_click_tracking', 'yes' ) && self::is_countable_request();
+        // Only a click that gets logged gets an ID, so every ID sent on can be matched back to a row.
+        $click_id     = $track ? bin2hex( random_bytes( 8 ) ) : '';
+        $destination  = $link->get_final_destination_url( $query_string, $page, $click_id );
 
         $fallback = $link->get_geo_fallback_url();
         if ( '' !== $fallback && $link->is_geo_excluded( KATINA_Clicks::detect_country() ) ) {
             $destination = $fallback;
-        } elseif ( '' !== $page && '' !== $link->get_sub_id_param() && $destination ) {
-            $destination = add_query_arg( $link->get_sub_id_param(), $page, $destination );
+        } elseif ( $destination ) {
+            if ( '' !== $page && '' !== $link->get_sub_id_param() ) {
+                $destination = add_query_arg( $link->get_sub_id_param(), $page, $destination );
+            }
+            if ( '' !== $click_id && '' !== $link->get_click_id_param() ) {
+                $destination = add_query_arg( $link->get_click_id_param(), $click_id, $destination );
+            }
         }
 
         if ( ! $destination || ! KATINA_Link::is_safe_destination( $destination ) ) {
@@ -121,7 +129,6 @@ class KATINA_Redirect {
         nocache_headers();
 
         $redirect_type = $link->get_redirect_type();
-        $track         = 'yes' === get_option( 'katina_enable_click_tracking', 'yes' ) && self::is_countable_request();
 
         // Send the visitor to the destination first, then record the click once
         // the response is flushed, so the DB write stays off the redirect's
@@ -134,12 +141,12 @@ class KATINA_Redirect {
         if ( $track && function_exists( 'fastcgi_finish_request' ) ) {
             wp_redirect( $destination, $redirect_type );
             fastcgi_finish_request();
-            self::record_click( $link );
+            self::record_click( $link, $click_id, $page );
             exit;
         }
 
         if ( $track ) {
-            self::record_click( $link );
+            self::record_click( $link, $click_id, $page );
         }
         wp_redirect( $destination, $redirect_type );
         exit;
@@ -165,9 +172,9 @@ class KATINA_Redirect {
         return true;
     }
 
-    private static function record_click( KATINA_Link $link ) {
+    private static function record_click( KATINA_Link $link, $click_id, $page ) {
         try {
-            KATINA_Clicks::record( $link );
+            KATINA_Clicks::record( $link, $click_id, $page );
         } catch ( \Throwable $e ) {
             // The redirect has already been served; a logging failure must never surface.
         }

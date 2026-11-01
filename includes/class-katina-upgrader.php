@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_Upgrader {
 
-    const DB_VERSION = '1.1';
+    const DB_VERSION = '1.2';
 
     public static function init() {
         add_action( 'init', array( __CLASS__, 'maybe_upgrade' ), -2 );
@@ -20,6 +20,12 @@ class KATINA_Upgrader {
         if ( version_compare( $current, '1.1', '<' ) ) {
             KATINA_Clicks_DB::create_table();
             self::merge_monitor_bots();
+        }
+
+        if ( version_compare( $current, '1.2', '<' ) ) {
+            KATINA_Clicks_DB::create_table();
+            // Sites that never saved a retention ran on the old 365-day default; keep it so the shorter default doesn't purge their history.
+            add_option( 'katina_clicks_retention_days', 365 );
         }
 
         update_option( 'katina_db_version', self::DB_VERSION );

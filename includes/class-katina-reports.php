@@ -240,12 +240,14 @@ class KATINA_Reports {
         // Streaming CSV directly to the response; WP_Filesystem has no streaming API.
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
         $out = fopen( 'php://output', 'w' );
-        fputcsv( $out, array( 'clicked_at_utc', 'link_id', 'link', 'referrer', 'country_code', 'is_bot' ), ',', '"', '' );
+        fputcsv( $out, array( 'clicked_at_utc', 'click_id', 'link_id', 'link', 'source_page', 'referrer', 'country_code', 'is_bot' ), ',', '"', '' );
         foreach ( $rows as $row ) {
             fputcsv( $out, array(
                 $row->clicked_at,
+                $row->click_id,
                 $row->link_id,
                 $row->post_title,
+                $row->source_page,
                 $row->referrer,
                 $row->country_code,
                 $row->is_bot,

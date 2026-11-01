@@ -128,7 +128,7 @@ class KATINA_Settings {
         self::add_field( 'katina_enable_click_tracking', __( 'Enable Click Tracking', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ) );
         self::add_field( 'katina_disable_ip_collection', __( 'Disable IP Collection (GDPR)', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes (recommended)', 'no' => 'No' ) );
         self::add_field( 'katina_excluded_bots', __( 'Excluded Bots (one per line)', 'katina-link-manager' ), 'textarea', 'katina_tracking', 'katina-settings-tracking' );
-        self::add_field( 'katina_clicks_retention_days', __( 'Click Log Retention (days)', 'katina-link-manager' ), 'int', 'katina_tracking', 'katina-settings-tracking', '365', array(), __( 'Click records older than this are deleted automatically each day. Set to 0 to keep forever (not GDPR-recommended).', 'katina-link-manager' ) );
+        self::add_field( 'katina_clicks_retention_days', __( 'Click Log Retention (days)', 'katina-link-manager' ), 'int', 'katina_tracking', 'katina-settings-tracking', (string) KATINA_Privacy::DEFAULT_RETENTION_DAYS, array(), __( 'Click records, including click IDs and source pages, older than this are deleted automatically each day. Set to 0 to keep forever (not GDPR-recommended).', 'katina-link-manager' ) );
 
         // Modules tab
         add_settings_section( 'katina_modules', __( 'Modules', 'katina-link-manager' ), array( __CLASS__, 'render_modules_section_intro' ), 'katina-settings-modules' );

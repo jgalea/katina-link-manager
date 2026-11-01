@@ -11,6 +11,7 @@ $pass_qs       = get_post_meta( $link->get_id(), '_katina_pass_query_str', true 
 $css_classes   = $link->get_css_classes();
 $rel_tags      = get_post_meta( $link->get_id(), '_katina_rel_tags', true );
 $sub_id_param  = get_post_meta( $link->get_id(), '_katina_sub_id_param', true );
+$click_param   = get_post_meta( $link->get_id(), '_katina_click_id_param', true );
 $geo_countries = get_post_meta( $link->get_id(), '_katina_geo_countries', true );
 $geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', true );
 ?>
@@ -113,6 +114,13 @@ $geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', tru
         <td>
             <input type="text" id="katina_sub_id_param" name="katina_sub_id_param" value="<?php echo esc_attr( $sub_id_param ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. sub_id', 'katina-link-manager' ); ?>" />
             <p class="description"><?php esc_html_e( 'Adds the slug of the page the link was clicked on to the destination under this parameter name, so your affiliate network can report per page. If the network wants the sub-ID inside another value, put [page] in the destination URL instead and leave this blank. Links in post content are tagged automatically.', 'katina-link-manager' ); ?></p>
+        </td>
+    </tr>
+    <tr>
+        <th><label for="katina_click_id_param"><?php esc_html_e( 'Click ID Parameter', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="text" id="katina_click_id_param" name="katina_click_id_param" value="<?php echo esc_attr( $click_param ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. click_id', 'katina-link-manager' ); ?>" />
+            <p class="description"><?php esc_html_e( 'Adds the ID of each logged click to the destination under this parameter name, so a sign-up reported by your affiliate network can be matched to the click in your export. To put it inside another value, use [click] in the destination URL instead and leave this blank.', 'katina-link-manager' ); ?></p>
         </td>
     </tr>
     <tr>

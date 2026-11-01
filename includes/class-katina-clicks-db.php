@@ -24,11 +24,14 @@ class KATINA_Clicks_DB {
             user_agent_hash CHAR(32) DEFAULT '',
             visitor_hash CHAR(16) NOT NULL DEFAULT '',
             is_bot TINYINT(1) DEFAULT 0,
+            click_id CHAR(16) NOT NULL DEFAULT '',
+            source_page VARCHAR(200) NOT NULL DEFAULT '',
             PRIMARY KEY (id),
             KEY idx_link_id (link_id),
             KEY idx_clicked_at (clicked_at),
             KEY idx_link_date (link_id, clicked_at),
-            KEY idx_visitor (visitor_hash, clicked_at)
+            KEY idx_visitor (visitor_hash, clicked_at),
+            KEY idx_click_id (click_id)
         ) {$charset};";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -45,6 +48,8 @@ class KATINA_Clicks_DB {
             '%s',   // user_agent_hash
             '%s',   // visitor_hash
             '%d',   // is_bot
+            '%s',   // click_id
+            '%s',   // source_page
         ) );
     }
 
@@ -331,7 +336,7 @@ class KATINA_Clicks_DB {
 
         if ( $link_id > 0 ) {
             return $wpdb->get_results( $wpdb->prepare(
-                "SELECT c.clicked_at, c.link_id, p.post_title, c.referrer, c.country_code, c.is_bot
+                "SELECT c.clicked_at, c.click_id, c.link_id, p.post_title, c.source_page, c.referrer, c.country_code, c.is_bot
                  FROM {$table} c
                  LEFT JOIN {$wpdb->posts} p ON p.ID = c.link_id
                  WHERE c.link_id = %d AND c.clicked_at >= %s AND c.clicked_at < %s
@@ -343,7 +348,7 @@ class KATINA_Clicks_DB {
         }
 
         return $wpdb->get_results( $wpdb->prepare(
-            "SELECT c.clicked_at, c.link_id, p.post_title, c.referrer, c.country_code, c.is_bot
+            "SELECT c.clicked_at, c.click_id, c.link_id, p.post_title, c.source_page, c.referrer, c.country_code, c.is_bot
              FROM {$table} c
              LEFT JOIN {$wpdb->posts} p ON p.ID = c.link_id
              WHERE c.clicked_at >= %s AND c.clicked_at < %s
