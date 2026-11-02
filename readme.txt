@@ -4,7 +4,7 @@ Tags: affiliate links, link management, link cloaking, redirect, link tracking
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.5.2
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,11 @@ Link health monitoring is optional and turned off by default. When you enable it
 5. Guided setup wizard with automatic migration detection.
 
 == Changelog ==
+
+= 1.6.0 =
+* New: every tracked click gets a random click ID and records the page it came from. Set a Click ID Parameter on a link, or put [click] in its destination, to pass the ID to affiliate networks that accept one.
+* New: click ID and source page columns in the CSV export and the personal data exporter.
+* Changed: new installs keep click data for 90 days. Existing installs keep their current setting.
 
 = 1.5.2 =
 * Fixed: you can now import from ThirstyAffiliates, Easy Affiliate Links or LinkCentral after deactivating them. The WP-CLI command and setup wizard used to refuse, and link categories were skipped.
