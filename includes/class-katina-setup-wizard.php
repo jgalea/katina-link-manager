@@ -141,44 +141,45 @@ class KATINA_Setup_Wizard {
         check_admin_referer( 'katina_wizard_save' );
 
         $settings = array(
-            'katina_link_prefix'   => 'sanitize_text_field',
-            'katina_redirect_type' => 'sanitize_text_field',
-            'katina_nofollow'      => 'sanitize_text_field',
-            'katina_new_window'    => 'sanitize_text_field',
+            'katina_link_prefix'   => function ( $value ) {
+                $prefix = sanitize_title( $value );
+                return '' !== $prefix ? $prefix : 'go';
+            },
+            'katina_redirect_type' => function ( $value ) {
+                $type = KATINA_Link::sanitize_redirect_type( $value );
+                return 'default' === $type ? '307' : $type;
+            },
+            'katina_nofollow'      => function ( $value ) {
+                return 'no' === $value ? 'no' : 'yes';
+            },
+            'katina_new_window'    => function ( $value ) {
+                return 'no' === $value ? 'no' : 'yes';
+            },
         );
 
         foreach ( $settings as $key => $sanitize ) {
             if ( isset( $_POST[ $key ] ) ) {
-                update_option( $key, $sanitize( wp_unslash( $_POST[ $key ] ) ) );
-            }
-        }
-
-        if ( ! empty( $_POST['katina_migrate_source'] ) ) {
-            $migrators = array(
-                'thirstyaffiliates'  => 'KATINA_Migrator_ThirstyAffiliates',
-                'prettylinks'        => 'KATINA_Migrator_PrettyLinks',
-                'linkcentral'        => 'KATINA_Migrator_LinkCentral',
-                'easyaffiliatelinks' => 'KATINA_Migrator_EasyAffiliateLinks',
-            );
-
-            $source_key = sanitize_key( wp_unslash( $_POST['katina_migrate_source'] ) );
-
-            if ( isset( $migrators[ $source_key ] ) ) {
-                $class    = $migrators[ $source_key ];
-                $migrator = new $class();
-                $migrator->run();
-
-                if ( ! empty( $_POST['katina_scan_content'] ) ) {
-                    $scanner = new KATINA_Content_Scanner( $migrator->get_id_map(), $class::get_source_name() );
-                    $scanner->scan_and_replace();
-                }
+                update_option( $key, $sanitize( sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) ) );
             }
         }
 
         update_option( 'katina_setup_complete', true );
         flush_rewrite_rules();
 
-        wp_redirect( admin_url( 'edit.php?post_type=katina_link&page=katina-dashboard' ) );
+        $source_key = ! empty( $_POST['katina_migrate_source'] ) ? sanitize_key( wp_unslash( $_POST['katina_migrate_source'] ) ) : '';
+        if ( isset( KATINA_Migration_Ajax::SOURCES[ $source_key ] ) ) {
+            // The import runs in batches on the Migrate screen, which shows its progress and result.
+            wp_safe_redirect( add_query_arg(
+                array(
+                    'katina_autostart' => $source_key,
+                    'katina_scan'      => empty( $_POST['katina_scan_content'] ) ? 0 : 1,
+                ),
+                KATINA_Tools::get_tab_url( 'migrate' )
+            ) );
+            exit;
+        }
+
+        wp_safe_redirect( admin_url( 'edit.php?post_type=katina_link&page=katina-dashboard' ) );
         exit;
     }
 

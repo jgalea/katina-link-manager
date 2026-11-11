@@ -348,6 +348,33 @@ a.katina-stat-card-link:focus {
     margin-bottom: 8px;
 }
 
+/* Migration progress */
+p.katina-warn {
+    color: #b91c1c;
+}
+
+.katina-migrate-progress {
+    margin-block: 12px;
+}
+
+.katina-migrate-form .button {
+    margin-inline-end: 8px;
+}
+
+.katina-progress-track {
+    block-size: 8px;
+    border-radius: 4px;
+    background: var(--katina-border-light);
+    overflow: hidden;
+}
+
+.katina-progress-bar {
+    block-size: 100%;
+    inline-size: 0;
+    background: var(--katina-primary, #2271b1);
+    transition: inline-size 0.3s ease;
+}
+
 /* Migration result list */
 .katina-result-list {
     list-style: disc;
