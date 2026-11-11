@@ -11,6 +11,9 @@ class KATINA_Clicks {
     public static function record( KATINA_Link $link, $click_id = '', $page = '' ) {
         $user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
         $is_bot     = KATINA_Bot_Detector::is_bot( $user_agent );
+        if ( $is_bot && 'no' === get_option( 'katina_store_bot_clicks', 'yes' ) ) {
+            return;
+        }
         $referrer   = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
 
         // Strip query string from stored referrer — they routinely leak PII

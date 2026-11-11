@@ -21,7 +21,7 @@ class KATINA_Settings {
         if ( get_option( 'katina_blank_options_repaired' ) ) {
             return;
         }
-        $never_empty = array( 'katina_link_prefix', 'katina_redirect_type', 'katina_nofollow', 'katina_sponsored', 'katina_new_window', 'katina_pass_query_str', 'katina_content_link_attributes', 'katina_enable_click_tracking', 'katina_disable_ip_collection', 'katina_enable_link_fixer', 'katina_enable_link_health', 'katina_trusted_proxy' );
+        $never_empty = array( 'katina_link_prefix', 'katina_redirect_type', 'katina_nofollow', 'katina_sponsored', 'katina_new_window', 'katina_pass_query_str', 'katina_content_link_attributes', 'katina_enable_click_tracking', 'katina_disable_ip_collection', 'katina_enable_link_fixer', 'katina_enable_link_health', 'katina_trusted_proxy', 'katina_store_bot_clicks' );
         foreach ( $never_empty as $option ) {
             if ( '' === get_option( $option ) ) {
                 delete_option( $option );
@@ -128,6 +128,7 @@ class KATINA_Settings {
 
         self::add_field( 'katina_enable_click_tracking', __( 'Enable Click Tracking', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ) );
         self::add_field( 'katina_disable_ip_collection', __( 'Disable IP Collection (GDPR)', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes (recommended)', 'no' => 'No' ) );
+        self::add_field( 'katina_store_bot_clicks', __( 'Store Bot Clicks', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ), __( 'Bot clicks are kept out of your totals either way. Choose No to stop saving them, which keeps the click log smaller on busy sites.', 'katina-link-manager' ) );
         self::add_field( 'katina_trusted_proxy', __( 'Trusted Proxy', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'auto', array(
             'auto'       => __( 'Automatic', 'katina-link-manager' ),
             'none'       => __( 'None (use the connecting IP)', 'katina-link-manager' ),

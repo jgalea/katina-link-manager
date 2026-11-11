@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_Upgrader {
 
-    const DB_VERSION = '1.4';
+    const DB_VERSION = '1.5';
 
     public static function init() {
         add_action( 'init', array( __CLASS__, 'maybe_upgrade' ), -2 );
@@ -38,6 +38,10 @@ class KATINA_Upgrader {
 
         if ( version_compare( $current, '1.4', '<' ) ) {
             self::merge_bots( array_merge( KATINA_Bot_Detector::PREVIEW_BOTS, KATINA_Bot_Detector::CLIENT_BOTS, KATINA_Bot_Detector::AI_BOTS ) );
+        }
+
+        if ( version_compare( $current, '1.5', '<' ) ) {
+            KATINA_Clicks_DB::create_table();
         }
 
         update_option( 'katina_db_version', self::DB_VERSION );

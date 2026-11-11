@@ -5,6 +5,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_Admin {
 
+    private static $click_counts = null;
+
     public static function init() {
         add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_boxes' ) );
         add_action( 'save_post_katina_link', array( __CLASS__, 'save_link_meta' ), 10, 2 );
@@ -243,8 +245,8 @@ class KATINA_Admin {
         $clicks_table = KATINA_Clicks_DB::get_table_name();
         $order        = strtoupper( $query->get( 'order' ) ) === 'ASC' ? 'ASC' : 'DESC';
 
-        $clauses['fields']  .= ", (SELECT COUNT(*) FROM {$clicks_table} WHERE link_id = {$wpdb->posts}.ID AND is_bot = 0) AS katina_total_clicks";
-        $clauses['orderby']  = "katina_total_clicks {$order}, {$wpdb->posts}.ID DESC";
+        $clauses['join']    .= " LEFT JOIN ( SELECT link_id, COUNT(*) AS total FROM {$clicks_table} WHERE is_bot = 0 GROUP BY link_id ) katina_counts ON katina_counts.link_id = {$wpdb->posts}.ID";
+        $clauses['orderby']  = "COALESCE( katina_counts.total, 0 ) {$order}, {$wpdb->posts}.ID DESC";
 
         return $clauses;
     }
@@ -270,7 +272,11 @@ class KATINA_Admin {
                 echo '<code>' . esc_html( str_replace( home_url(), '', $cloaked ) ) . '</code>';
                 break;
             case 'katina_clicks':
-                echo '<span class="katina-click-count">' . esc_html( number_format_i18n( KATINA_Clicks_DB::get_total_clicks( $post_id ) ) ) . '</span>';
+                if ( null === self::$click_counts ) {
+                    global $wp_query;
+                    self::$click_counts = KATINA_Clicks_DB::get_total_clicks_for( wp_list_pluck( $wp_query->posts, 'ID' ) );
+                }
+                echo '<span class="katina-click-count">' . esc_html( number_format_i18n( isset( self::$click_counts[ $post_id ] ) ? self::$click_counts[ $post_id ] : 0 ) ) . '</span>';
                 break;
             case 'katina_health':
                 $status = get_post_meta( $post_id, KATINA_Link_Health::META_STATUS, true );
