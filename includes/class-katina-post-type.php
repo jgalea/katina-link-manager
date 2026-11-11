@@ -35,6 +35,7 @@ class KATINA_Post_Type {
             'show_in_menu'        => true,
             'show_in_rest'        => true,
             'rest_base'           => 'katina-links',
+            'rest_controller_class' => 'KATINA_Rest_Posts_Controller',
             'menu_icon'           => 'dashicons-admin-links',
             'menu_position'       => 26,
             'supports'            => array( 'title' ),
@@ -75,6 +76,7 @@ class KATINA_Post_Type {
             'show_ui'           => true,
             'show_admin_column' => true,
             'show_in_rest'      => true,
+            'rest_controller_class' => 'KATINA_Rest_Terms_Controller',
             'rewrite'           => false,
         ) );
 
@@ -92,6 +94,7 @@ class KATINA_Post_Type {
             'show_ui'           => true,
             'show_admin_column' => true,
             'show_in_rest'      => true,
+            'rest_controller_class' => 'KATINA_Rest_Terms_Controller',
             'rewrite'           => false,
         ) );
     }
