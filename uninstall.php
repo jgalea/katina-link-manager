@@ -39,6 +39,7 @@ $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}katina_link_index" );
 // Delete options
 $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'katina\_%' OR option_name LIKE '\_transient\_katina\_%' OR option_name LIKE '\_transient\_timeout\_katina\_%'" );
 $wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'katina_setup_notice_dismissed' ) );
+$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'katina_proxy_notice_dismissed' ) );
 
 // Flush rewrite rules
 flush_rewrite_rules();
