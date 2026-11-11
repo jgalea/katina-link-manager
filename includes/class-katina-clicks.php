@@ -53,14 +53,21 @@ class KATINA_Clicks {
         }
     }
 
-    // One-way hash of IP + UA under a salt that changes daily, so it can group one visitor's clicks within a day and nothing longer. The IP is hashed here and never stored, whatever the IP collection setting says.
+    // One-way hash of IP + UA under a random salt that is replaced daily and discarded, so it can group one visitor's clicks within a day and nothing longer. The IP is hashed here and never stored, whatever the IP collection setting says.
     private static function visitor_hash( $user_agent ) {
         $ip = self::get_client_ip();
         if ( '' === $ip && '' === $user_agent ) {
             return '';
         }
 
-        return substr( hash_hmac( 'sha256', $ip . '|' . $user_agent, wp_salt( 'auth' ) . gmdate( 'Y-m-d' ) ), 0, 16 );
+        $key  = 'katina_salt_' . gmdate( 'Y-m-d' );
+        $salt = get_transient( $key );
+        if ( ! $salt ) {
+            $salt = bin2hex( random_bytes( 16 ) );
+            set_transient( $key, $salt, 36 * HOUR_IN_SECONDS );
+        }
+
+        return substr( hash_hmac( 'sha256', $ip . '|' . $user_agent, $salt ), 0, 16 );
     }
 
     // Forwarded and CDN headers are client-controlled unless a proxy the site trusts sets them. 'auto' trusts them only when the request arrives from a private address, so a proxy on the same network is covered and a direct visitor can't spoof them.

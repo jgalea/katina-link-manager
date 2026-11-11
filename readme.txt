@@ -17,7 +17,7 @@ Katina Link Manager helps you manage all your outbound links in one place. Creat
 **Why Katina Link Manager?**
 
 * Zero nag screens, zero upsell banners, zero review popups
-* GDPR-compliant click tracking (no IP addresses stored by default)
+* Privacy-minded click tracking (no IP addresses stored by default)
 * One-click migration from ThirstyAffiliates, Pretty Links, LinkCentral, and Easy Affiliate Links
 * Link health monitoring catches broken links before your visitors do
 * Ad-blocker safe
@@ -53,9 +53,9 @@ Katina Link Manager helps you manage all your outbound links in one place. Creat
 
 No. Never. This is a core principle of Katina Link Manager.
 
-= Is click tracking GDPR compliant? =
+= Does click tracking store IP addresses? =
 
-Yes. By default, Katina Link Manager does not store IP addresses. Country data is derived at click time and the IP is immediately discarded.
+No. By default, Katina Link Manager does not store IP addresses. Country data is derived at click time and the IP is immediately discarded. Unique-click counts use a one-way hash of the IP and browser under a random salt that is replaced every day, so earlier days can't be reconstructed. Whether your use of click tracking meets GDPR depends on your own setup, so check it against your privacy policy.
 
 = Can I migrate from ThirstyAffiliates or Pretty Links? =
 
