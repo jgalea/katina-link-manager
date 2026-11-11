@@ -96,7 +96,7 @@ class KATINA_Admin {
             'edit.php?post_type=katina_link',
             __( 'Dashboard', 'katina-link-manager' ),
             __( 'Dashboard', 'katina-link-manager' ),
-            'edit_posts',
+            'edit_katina_links',
             'katina-dashboard',
             array( __CLASS__, 'render_dashboard' ),
             0

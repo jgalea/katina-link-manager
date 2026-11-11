@@ -42,8 +42,22 @@ class KATINA_Post_Type {
             'rewrite'             => false,
             'exclude_from_search' => true,
             'hierarchical'        => false,
-            'capability_type'     => 'post',
+            'capability_type'     => array( 'katina_link', 'katina_links' ),
+            'map_meta_cap'        => true,
         ) );
+    }
+
+    public static function grant_capabilities() {
+        $caps = array( 'edit_katina_links', 'edit_others_katina_links', 'edit_private_katina_links', 'edit_published_katina_links', 'publish_katina_links', 'read_private_katina_links', 'delete_katina_links', 'delete_others_katina_links', 'delete_private_katina_links', 'delete_published_katina_links' );
+        foreach ( array( 'administrator', 'editor' ) as $role_name ) {
+            $role = get_role( $role_name );
+            if ( ! $role ) {
+                continue;
+            }
+            foreach ( $caps as $cap ) {
+                $role->add_cap( $cap );
+            }
+        }
     }
 
     private static function register_taxonomies() {

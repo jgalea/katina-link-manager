@@ -10,6 +10,7 @@ class KATINA_Activator {
         KATINA_Link_Index::create_table();
         self::migrate_legacy_data();
         self::set_default_options();
+        KATINA_Post_Type::grant_capabilities();
         // Link health checks make outbound HTTP requests, so they stay off until
         // the user explicitly enables them. Enabling the setting schedules the cron.
         KATINA_Privacy::schedule();
