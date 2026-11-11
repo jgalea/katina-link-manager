@@ -207,11 +207,11 @@ class KATINA_Link {
         }
     }
 
-    public static function find_by_slug( $slug ) {
+    public static function find_by_slug( $slug, $any_status = false ) {
         $posts = get_posts( array(
             'post_type'      => 'katina_link',
             'name'           => sanitize_title( $slug ),
-            'post_status'    => 'publish',
+            'post_status'    => $any_status ? array( 'publish', 'draft', 'pending', 'private', 'future' ) : 'publish',
             'posts_per_page' => 1,
             'no_found_rows'  => true,
         ) );
