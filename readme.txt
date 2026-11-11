@@ -83,7 +83,7 @@ Link health monitoring is optional and turned off by default. When you enable it
 * New: slug field on the link screen with a live preview and a warning when a slug is already taken.
 * New: migrations run in batches with progress and a preview, resume where they stopped, can be re-run without creating duplicates, and offer to adopt the ThirstyAffiliates prefix.
 * New: settings to trust a proxy for visitor IP and country headers, skip storing bot clicks, keep data on uninstall and enable the root-level slug fallback.
-* New: links have their own capabilities, so Authors can't publish redirects or see click totals. Existing Administrators and Editors keep access.
+* Changed: links have their own capabilities. Authors and other roles can no longer publish links or see site-wide click totals; Administrators and Editors get access automatically. To give a role access back, add the edit_katina_links, edit_published_katina_links, publish_katina_links, delete_katina_links and delete_published_katina_links capabilities to it with a role editor plugin or `get_role( 'author' )->add_cap()`.
 * Changed: Link Health keeps checking in the background until every link has been checked.
 * Changed: Link Fixer is off by default on new installs and works on cached pages.
 * Changed: the bot list now includes link previews, HTTP clients and AI crawlers, and is merged into saved lists.
