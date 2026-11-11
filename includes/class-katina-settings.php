@@ -136,8 +136,9 @@ class KATINA_Settings {
             'auto'       => __( 'Automatic', 'katina-link-manager' ),
             'none'       => __( 'None (use the connecting IP)', 'katina-link-manager' ),
             'cloudflare' => __( 'Cloudflare', 'katina-link-manager' ),
+            'cloudfront' => __( 'Amazon CloudFront', 'katina-link-manager' ),
             'forwarded'  => __( 'Reverse proxy or load balancer', 'katina-link-manager' ),
-        ), __( 'Which proxy to trust for visitor IPs and country headers. Automatic trusts forwarded headers only when the request comes from a private address. Choose Cloudflare if the site sits behind it.', 'katina-link-manager' ) );
+        ), __( 'Which proxy to trust for visitor IPs and country headers. Automatic reads the forwarded address chain only when the request comes from a private address, and reads no country headers. Choose Cloudflare or Amazon CloudFront if the site sits behind it to use their country headers.', 'katina-link-manager' ) );
         self::add_field( 'katina_excluded_bots', __( 'Excluded Bots (one per line)', 'katina-link-manager' ), 'textarea', 'katina_tracking', 'katina-settings-tracking' );
         self::add_field( 'katina_clicks_retention_days', __( 'Click Log Retention (days)', 'katina-link-manager' ), 'int', 'katina_tracking', 'katina-settings-tracking', (string) KATINA_Privacy::DEFAULT_RETENTION_DAYS, array(), __( 'Click records, including click IDs and source pages, older than this are deleted automatically each day. Set to 0 to keep forever (not GDPR-recommended).', 'katina-link-manager' ) );
 

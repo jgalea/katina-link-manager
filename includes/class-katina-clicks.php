@@ -73,7 +73,7 @@ class KATINA_Clicks {
         return substr( hash_hmac( 'sha256', $ip . '|' . $user_agent, $salt ), 0, 16 );
     }
 
-    // Forwarded and CDN headers are client-controlled unless a proxy the site trusts sets them. 'auto' trusts them only when the request arrives from a private address, so a proxy on the same network is covered and a direct visitor can't spoof them.
+    // Forwarded and CDN headers are client-controlled unless a proxy the site trusts sets them. 'auto' trusts the forwarded chain only when the request arrives from a private address, and then only the entries added by the proxies themselves. CDN country headers are read in the matching explicit mode only.
     public static function trusted_proxy() {
         $mode = (string) get_option( 'katina_trusted_proxy', 'auto' );
         if ( 'auto' === $mode ) {
@@ -81,24 +81,19 @@ class KATINA_Clicks {
             $mode   = $remote && ! filter_var( $remote, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ? 'forwarded' : 'none';
         }
         $mode = apply_filters( 'katina_trusted_proxy', $mode );
-        return in_array( $mode, array( 'cloudflare', 'forwarded' ), true ) ? $mode : 'none';
+        return in_array( $mode, array( 'cloudflare', 'cloudfront', 'forwarded' ), true ) ? $mode : 'none';
     }
 
     public static function detect_country() {
         // A CDN-supplied country code carries no IP, so it's read even when IP collection is off.
-        $proxy   = self::trusted_proxy();
-        $headers = array();
-        if ( 'cloudflare' === $proxy ) {
-            $headers[] = 'HTTP_CF_IPCOUNTRY';
-        }
-        if ( 'none' !== $proxy ) {
-            $headers[] = 'HTTP_GEOIP_COUNTRY_CODE';
-            $headers[] = 'HTTP_CLOUDFRONT_VIEWER_COUNTRY';
-        }
-        foreach ( $headers as $header ) {
-            if ( empty( $_SERVER[ $header ] ) ) {
-                continue;
-            }
+        $explicit = (string) get_option( 'katina_trusted_proxy', 'auto' );
+        $headers  = array(
+            'cloudflare' => 'HTTP_CF_IPCOUNTRY',
+            'cloudfront' => 'HTTP_CLOUDFRONT_VIEWER_COUNTRY',
+            'forwarded'  => 'HTTP_GEOIP_COUNTRY_CODE',
+        );
+        $header   = $headers[ $explicit ] ?? '';
+        if ( '' !== $header && self::trusted_proxy() === $explicit && ! empty( $_SERVER[ $header ] ) ) {
             $code = strtoupper( sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) ) );
             if ( preg_match( '/^[A-Z]{2}$/', $code ) && ! in_array( $code, array( 'XX', 'T1' ), true ) ) {
                 return $code;
@@ -125,22 +120,19 @@ class KATINA_Clicks {
     }
 
     private static function get_client_ip() {
-        $proxy   = self::trusted_proxy();
-        $headers = array();
-        if ( 'cloudflare' === $proxy ) {
-            $headers[] = 'HTTP_CF_CONNECTING_IP';
-        }
-        if ( 'none' !== $proxy ) {
-            $headers[] = 'HTTP_X_FORWARDED_FOR';
-            $headers[] = 'HTTP_X_REAL_IP';
+        $proxy = self::trusted_proxy();
+
+        if ( 'cloudflare' === $proxy && ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+            $ip = trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) );
+            if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+                return $ip;
+            }
         }
 
-        foreach ( $headers as $header ) {
-            if ( ! empty( $_SERVER[ $header ] ) ) {
-                $ip = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
-                if ( strpos( $ip, ',' ) !== false ) {
-                    $ip = trim( explode( ',', $ip )[0] );
-                }
+        if ( in_array( $proxy, array( 'cloudfront', 'forwarded' ), true ) && ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+            // Each proxy appends the address it saw, so the client-supplied entries sit on the left. The first public address from the right is the nearest one a trusted proxy vouches for.
+            $chain = array_reverse( array_map( 'trim', explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) ) ) );
+            foreach ( $chain as $ip ) {
                 if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
                     return $ip;
                 }
