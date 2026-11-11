@@ -37,14 +37,17 @@ foreach ( $migrators as $key => $class ) {
 $retention_days = (int) get_option( 'katina_clicks_retention_days', KATINA_Privacy::DEFAULT_RETENTION_DAYS );
 $autostart      = isset( $_GET['katina_autostart'] ) ? sanitize_key( wp_unslash( $_GET['katina_autostart'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $autostart_scan = ! empty( $_GET['katina_scan'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+// A link alone only pre-selects the source; the nonce from the setup wizard is what allows the import to start.
+$autostart_run  = isset( $_GET['katina_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['katina_nonce'] ) ), 'katina_autostart_' . $autostart );
 
 wp_enqueue_script( 'katina-migration', KATINA_PLUGIN_URL . 'assets/js/migration.js', array( 'jquery' ), KATINA_VERSION, true );
 wp_localize_script( 'katina-migration', 'katinaMigration', array(
     'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
     'nonce'     => wp_create_nonce( 'katina_migration' ),
-    'autostart' => isset( $states[ $autostart ] ) ? array( 'source' => $autostart, 'scan' => $autostart_scan ) : null,
+    'autostart' => isset( $states[ $autostart ] ) ? array( 'source' => $autostart, 'scan' => $autostart_scan, 'run' => (bool) $autostart_run ) : null,
     'i18n'      => array(
         'starting' => __( 'Starting...', 'katina-link-manager' ),
+        'confirm'  => __( 'Start importing now?', 'katina-link-manager' ),
         'failed'   => __( 'The migration stopped because of a server error. Run it again to carry on where it left off.', 'katina-link-manager' ),
     ),
 ) );

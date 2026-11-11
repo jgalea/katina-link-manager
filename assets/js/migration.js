@@ -80,7 +80,9 @@
         }
         $form.find('input[name=katina_scan_content]').prop('checked', !!auto.scan);
         $form[0].scrollIntoView({ block: 'center' });
-        run($form, false);
+        if (auto.run && window.confirm(katinaMigration.i18n.confirm)) {
+            run($form, false);
+        }
     });
 
 })(jQuery);

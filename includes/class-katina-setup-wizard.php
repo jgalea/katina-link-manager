@@ -173,6 +173,7 @@ class KATINA_Setup_Wizard {
                 array(
                     'katina_autostart' => $source_key,
                     'katina_scan'      => empty( $_POST['katina_scan_content'] ) ? 0 : 1,
+                    'katina_nonce'     => wp_create_nonce( 'katina_autostart_' . $source_key ),
                 ),
                 KATINA_Tools::get_tab_url( 'migrate' )
             ) );
