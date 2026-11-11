@@ -11,6 +11,7 @@ class KATINA_Link_Health {
     const META_ERROR      = '_katina_health_error';
     const CRON_HOOK       = 'katina_health_check_cron';
     const RECHECK_HOOK    = 'katina_health_recheck_drain';
+    const DIGEST_HOOK     = 'katina_health_digest_cron';
     const BATCH_SIZE      = 20;
     const MAX_BODY_BYTES  = 262144;
     const MAX_REDIRECTS   = 5;
@@ -19,8 +20,89 @@ class KATINA_Link_Health {
         if ( ! self::is_enabled() ) {
             return;
         }
-        add_action( self::CRON_HOOK, array( __CLASS__, 'run_batch_check' ) );
+        // The scheduled run keeps going in follow-up batches until every link has been checked in the last day.
+        add_action( self::CRON_HOOK, array( __CLASS__, 'drain_recheck_queue' ) );
         add_action( self::RECHECK_HOOK, array( __CLASS__, 'drain_recheck_queue' ) );
+        add_action( self::DIGEST_HOOK, array( __CLASS__, 'send_digest' ) );
+        self::schedule_digest();
+    }
+
+    public static function schedule_digest() {
+        $frequency = get_option( 'katina_health_digest', 'no' );
+        $scheduled = wp_next_scheduled( self::DIGEST_HOOK );
+        if ( ! self::is_enabled() || ! in_array( $frequency, array( 'daily', 'weekly' ), true ) ) {
+            if ( $scheduled ) {
+                wp_unschedule_event( $scheduled, self::DIGEST_HOOK );
+            }
+            return;
+        }
+        if ( wp_get_schedule( self::DIGEST_HOOK ) !== $frequency ) {
+            if ( $scheduled ) {
+                wp_unschedule_event( $scheduled, self::DIGEST_HOOK );
+            }
+            wp_schedule_event( time() + HOUR_IN_SECONDS, $frequency, self::DIGEST_HOOK );
+        }
+    }
+
+    // Emails the site owner the links currently marked broken or erroring. Returns how many it listed.
+    public static function send_digest() {
+        $query = new WP_Query( array(
+            'post_type'      => 'katina_link',
+            'post_status'    => 'publish',
+            'posts_per_page' => 50,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'meta_query'     => array(
+                array(
+                    'key'     => self::META_STATUS,
+                    'value'   => array( 'broken', 'error' ),
+                    'compare' => 'IN',
+                ),
+            ),
+        ) );
+
+        if ( ! $query->found_posts ) {
+            return 0;
+        }
+
+        $lines = array();
+        foreach ( $query->posts as $post ) {
+            $code    = get_post_meta( $post->ID, self::META_HTTP_CODE, true );
+            $error   = get_post_meta( $post->ID, self::META_ERROR, true );
+            $lines[] = wp_specialchars_decode( $post->post_title, ENT_QUOTES ) . "\n"
+                . get_post_meta( $post->ID, '_katina_destination_url', true ) . "\n"
+                . trim( ( $code ? $code . ' ' : '' ) . $error ) . "\n"
+                . admin_url( 'post.php?post=' . $post->ID . '&action=edit' );
+        }
+
+        $to = sanitize_email( (string) get_option( 'katina_health_digest_email', '' ) );
+        if ( ! $to ) {
+            $to = get_option( 'admin_email' );
+        }
+
+        $site    = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+        $subject = sprintf(
+            /* translators: 1: site name, 2: number of broken links */
+            _n( '%1$s: %2$d broken link', '%1$s: %2$d broken links', $query->found_posts, 'katina-link-manager' ),
+            $site,
+            $query->found_posts
+        );
+        $body = sprintf(
+            /* translators: %d: number of broken links */
+            _n( 'Katina Link Manager found %d link that needs attention.', 'Katina Link Manager found %d links that need attention.', $query->found_posts, 'katina-link-manager' ),
+            $query->found_posts
+        ) . "\n\n" . implode( "\n\n", $lines );
+        if ( $query->found_posts > count( $lines ) ) {
+            $body .= "\n\n" . sprintf(
+                /* translators: %s: URL of the filtered links list */
+                __( 'More: %s', 'katina-link-manager' ),
+                admin_url( 'edit.php?post_type=katina_link&katina_health=broken_error' )
+            );
+        }
+
+        wp_mail( $to, $subject, $body );
+
+        return count( $lines );
     }
 
     public static function is_enabled() {
@@ -31,12 +113,17 @@ class KATINA_Link_Health {
         if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
             wp_schedule_event( time(), 'twicedaily', self::CRON_HOOK );
         }
+        self::schedule_digest();
     }
 
     public static function unschedule() {
         $timestamp = wp_next_scheduled( self::CRON_HOOK );
         if ( $timestamp ) {
             wp_unschedule_event( $timestamp, self::CRON_HOOK );
+        }
+        $digest = wp_next_scheduled( self::DIGEST_HOOK );
+        if ( $digest ) {
+            wp_unschedule_event( $digest, self::DIGEST_HOOK );
         }
     }
 

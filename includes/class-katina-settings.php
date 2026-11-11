@@ -13,6 +13,8 @@ class KATINA_Settings {
         add_action( 'update_option_katina_link_prefix', array( __CLASS__, 'schedule_rewrite_flush' ) );
         add_action( 'update_option_katina_enable_link_health', array( __CLASS__, 'on_link_health_toggle' ), 10, 2 );
         add_action( 'add_option_katina_enable_link_health', array( __CLASS__, 'on_link_health_added' ), 10, 2 );
+        add_action( 'update_option_katina_health_digest', array( 'KATINA_Link_Health', 'schedule_digest' ) );
+        add_action( 'add_option_katina_health_digest', array( 'KATINA_Link_Health', 'schedule_digest' ) );
         add_action( 'init', array( __CLASS__, 'maybe_flush_rewrites' ), 99 );
     }
 
@@ -148,6 +150,8 @@ class KATINA_Settings {
 
         self::add_field( 'katina_enable_link_fixer', __( 'Link Fixer', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Applies each cloaked link\'s rel, target and class in the visitor\'s browser, for links that themes or page builders output outside post content. Links in post content already get these when the page is built, so this adds a request to every page that has a cloaked link.', 'katina-link-manager' ) );
         self::add_field( 'katina_enable_link_health', __( 'Link Health Checks', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Off by default. When enabled, the plugin periodically sends outbound HTTP requests to each link\'s destination URL to detect broken or error responses.', 'katina-link-manager' ) );
+        self::add_field( 'katina_health_digest', __( 'Broken Link Email', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'no' => 'Off', 'weekly' => 'Weekly', 'daily' => 'Daily' ), __( 'Emails you the links that link health checks have marked broken. Nothing is sent when every link is healthy. Needs Link Health Checks to be enabled.', 'katina-link-manager' ) );
+        self::add_field( 'katina_health_digest_email', __( 'Broken Link Email Address', 'katina-link-manager' ), 'text', 'katina_modules', 'katina-settings-modules', '', array(), __( 'Leave blank to use the site admin email.', 'katina-link-manager' ) );
     }
 
     public static function render_modules_section_intro() {
