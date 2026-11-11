@@ -71,7 +71,7 @@ class KATINA_Link_Health {
 
         if ( ! $url ) {
             $result = self::result( 'no_url', '', '' );
-        } elseif ( ! KATINA_Link::is_safe_destination( $url ) || ! self::is_safe_outbound_host( $url ) ) {
+        } elseif ( ! KATINA_Link::is_safe_destination( $url ) || ! self::resolve_public_ips( $url ) ) {
             // SSRF guards: scheme allowlist + private/reserved IP block.
             $result = self::result( 'error', '', 'Refused: unsafe destination scheme or private IP' );
         } else {
@@ -194,10 +194,19 @@ class KATINA_Link_Health {
     private static function fetch( $url, $args ) {
         $args['redirection'] = 0;
         for ( $hop = 0; $hop <= self::MAX_REDIRECTS; $hop++ ) {
-            if ( $hop > 0 && ( ! KATINA_Link::is_safe_destination( $url ) || ! self::is_safe_outbound_host( $url ) ) ) {
+            $ips = KATINA_Link::is_safe_destination( $url ) ? self::resolve_public_ips( $url ) : array();
+            if ( ! $ips ) {
                 return array( new WP_Error( 'katina_unsafe_redirect', 'Refused: redirect to an unsafe destination scheme or private IP' ), $url );
             }
+            // Connect to the address that passed the check, so a second DNS lookup can't point somewhere else.
+            $parts = wp_parse_url( $url );
+            $port  = isset( $parts['port'] ) ? $parts['port'] : ( 'https' === strtolower( $parts['scheme'] ) ? 443 : 80 );
+            $pin   = static function ( $handle ) use ( $parts, $port, $ips ) {
+                curl_setopt( $handle, CURLOPT_RESOLVE, array( $parts['host'] . ':' . $port . ':' . $ips[0] ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
+            };
+            add_action( 'http_api_curl', $pin );
             $response = wp_remote_get( $url, $args );
+            remove_action( 'http_api_curl', $pin );
             if ( is_wp_error( $response ) ) {
                 return array( $response, $url );
             }
@@ -296,17 +305,17 @@ class KATINA_Link_Health {
     }
 
     /**
-     * Reject destinations that resolve to private/reserved/loopback IPs to
-     * prevent SSRF against internal services and cloud metadata endpoints
+     * Resolve a destination host and return its addresses, or an empty array
+     * when it doesn't resolve or any address is private, reserved or loopback.
+     * Blocks SSRF against internal services and cloud metadata endpoints
      * (e.g. 169.254.169.254 on AWS).
      */
-    private static function is_safe_outbound_host( $url ) {
+    private static function resolve_public_ips( $url ) {
         $host = wp_parse_url( $url, PHP_URL_HOST );
         if ( ! $host ) {
-            return false;
+            return array();
         }
 
-        // Resolve and reject if any A/AAAA points to a private/reserved range.
         $ips = array();
         $a   = @gethostbynamel( $host );
         if ( is_array( $a ) ) {
@@ -320,16 +329,12 @@ class KATINA_Link_Health {
                 }
             }
         }
-        if ( empty( $ips ) ) {
-            // Hostname doesn't resolve — treat as unsafe (will be marked error).
-            return false;
-        }
         foreach ( $ips as $ip ) {
             if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-                return false;
+                return array();
             }
         }
-        return true;
+        return $ips;
     }
 
     private static function code_to_status( $code ) {
