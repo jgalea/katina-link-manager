@@ -242,7 +242,7 @@ class KATINA_Reports {
         $out = fopen( 'php://output', 'w' );
         fputcsv( $out, array( 'clicked_at_utc', 'click_id', 'link_id', 'link', 'source_page', 'referrer', 'country_code', 'is_bot' ), ',', '"', '' );
         foreach ( $rows as $row ) {
-            fputcsv( $out, array(
+            fputcsv( $out, array_map( array( 'KATINA_CSV', 'defang_csv_cell' ), array(
                 $row->clicked_at,
                 $row->click_id,
                 $row->link_id,
@@ -251,7 +251,7 @@ class KATINA_Reports {
                 $row->referrer,
                 $row->country_code,
                 $row->is_bot,
-            ), ',', '"', '' );
+            ) ), ',', '"', '' );
         }
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
         fclose( $out );

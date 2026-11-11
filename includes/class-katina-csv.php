@@ -156,7 +156,7 @@ class KATINA_CSV {
      * Defang spreadsheet formula injection by prefixing dangerous-leading cells
      * with a single quote so Excel/Numbers/LibreOffice treat the cell as text.
      */
-    private static function defang_csv_cell( $value ) {
+    public static function defang_csv_cell( $value ) {
         $str = (string) $value;
         if ( $str !== '' && in_array( $str[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
             return "'" . $str;
