@@ -111,7 +111,7 @@ class KATINA_Activator {
             'katina_pass_query_str'        => 'no',
             'katina_enable_click_tracking' => 'yes',
             'katina_disable_ip_collection' => 'yes',
-            'katina_enable_link_fixer'     => 'yes',
+            'katina_enable_link_fixer'     => 'no',
             'katina_enable_link_health'    => 'no',
             'katina_clicks_retention_days' => KATINA_Privacy::DEFAULT_RETENTION_DAYS,
             'katina_excluded_bots'         => KATINA_Bot_Detector::default_list(),
