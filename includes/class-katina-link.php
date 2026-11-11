@@ -21,6 +21,9 @@ class KATINA_Link {
         'click_id_param'     => '_katina_click_id_param',
         'geo_countries'      => '_katina_geo_countries',
         'geo_fallback_url'   => '_katina_geo_fallback_url',
+        'expires_at'         => '_katina_expires_at',
+        'max_clicks'         => '_katina_max_clicks',
+        'expired_url'        => '_katina_expired_url',
     );
 
     // Set on cloaked links in post content so a link knows which page it was clicked on.
@@ -132,6 +135,21 @@ class KATINA_Link {
         return self::is_safe_destination( $url ) ? $url : '';
     }
 
+    public function get_expired_url() {
+        $url = (string) get_post_meta( $this->id, self::META_KEYS['expired_url'], true );
+        return self::is_safe_destination( $url ) ? $url : '';
+    }
+
+    // A link expires at a date (stored as a UTC timestamp) or after a number of human clicks, whichever comes first.
+    public function is_expired() {
+        $expires_at = (int) get_post_meta( $this->id, self::META_KEYS['expires_at'], true );
+        if ( $expires_at && time() >= $expires_at ) {
+            return true;
+        }
+        $max_clicks = (int) get_post_meta( $this->id, self::META_KEYS['max_clicks'], true );
+        return $max_clicks > 0 && KATINA_Clicks_DB::get_total_clicks( $this->id ) >= $max_clicks;
+    }
+
     public function is_geo_excluded( $country ) {
         $list = preg_split( '/[\s,]+/', strtoupper( (string) get_post_meta( $this->id, self::META_KEYS['geo_countries'], true ) ), -1, PREG_SPLIT_NO_EMPTY );
         return '' !== $country && in_array( $country, $list, true );
@@ -198,7 +216,7 @@ class KATINA_Link {
                 if ( 'redirect_type' === $key ) {
                     $value = self::sanitize_redirect_type( $data[ $key ] );
                 } else {
-                    $value = in_array( $key, array( 'destination_url', 'geo_fallback_url' ), true )
+                    $value = in_array( $key, array( 'destination_url', 'geo_fallback_url', 'expired_url' ), true )
                         ? esc_url_raw( $data[ $key ], array( 'http', 'https' ) )
                         : sanitize_text_field( $data[ $key ] );
                 }

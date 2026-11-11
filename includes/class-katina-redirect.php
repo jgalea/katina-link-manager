@@ -124,6 +124,12 @@ class KATINA_Redirect {
             }
         }
 
+        // An expired link sends visitors to its expiry URL, or is treated as not found when it has none.
+        if ( $link->is_expired() ) {
+            $destination = $link->get_expired_url();
+            $track       = false;
+        }
+
         if ( ! $destination || ! KATINA_Link::is_safe_destination( $destination ) ) {
             return;
         }
