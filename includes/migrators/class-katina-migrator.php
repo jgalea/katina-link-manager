@@ -22,6 +22,54 @@ abstract class KATINA_Migrator {
 
     protected $progress = null;
 
+    // Last source ID fully processed. A run stops early when its time budget is spent and resumes from here.
+    protected $cursor = 0;
+
+    protected $complete = true;
+
+    protected $deadline = 0;
+
+    const CLICK_BATCH = 1000;
+
+    public function set_cursor( $cursor ) {
+        $this->cursor = (int) $cursor;
+        return $this;
+    }
+
+    public function set_time_budget( $seconds ) {
+        $this->deadline = $seconds > 0 ? microtime( true ) + $seconds : 0;
+        return $this;
+    }
+
+    public function get_cursor() {
+        return $this->cursor;
+    }
+
+    public function is_complete() {
+        return $this->complete;
+    }
+
+    protected function out_of_time() {
+        return $this->deadline && microtime( true ) > $this->deadline;
+    }
+
+    // Source IDs map to the links already created for them, so a later step can rebuild the map without re-running.
+    public static function load_id_map() {
+        global $wpdb;
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT pm.meta_value AS source_id, p.ID AS link_id FROM {$wpdb->postmeta} pm
+             INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+             WHERE pm.meta_key = %s AND pm.meta_value LIKE %s AND p.post_type = 'katina_link' AND p.post_status <> 'trash'",
+            KATINA_Link::SOURCE_META,
+            $wpdb->esc_like( static::SOURCE . ':' ) . '%'
+        ) );
+        $map = array();
+        foreach ( $rows as $row ) {
+            $map[ (int) substr( $row->source_id, strlen( static::SOURCE ) + 1 ) ] = (int) $row->link_id;
+        }
+        return $map;
+    }
+
     public function set_dry_run( $dry_run ) {
         $this->dry_run = (bool) $dry_run;
         return $this;
@@ -222,6 +270,11 @@ abstract class KATINA_Migrator {
             return $existing->term_id;
         }
 
+        if ( $this->dry_run ) {
+            $this->results['categories']++;
+            return 0;
+        }
+
         $result = wp_insert_term( $name, 'katina_category', array(
             'parent' => (int) $parent_id,
         ) );
@@ -238,23 +291,78 @@ abstract class KATINA_Migrator {
         return (int) $result['term_id'];
     }
 
-    protected function import_click( $link_id, array $click_data ) {
-        $result = KATINA_Clicks_DB::insert( array(
-            'link_id'        => (int) $link_id,
-            'clicked_at'     => isset( $click_data['clicked_at'] ) ? $click_data['clicked_at'] : current_time( 'mysql', true ),
-            'referrer'       => isset( $click_data['referrer'] ) ? $click_data['referrer'] : '',
-            'country_code'   => isset( $click_data['country_code'] ) ? $click_data['country_code'] : '',
-            'user_agent_hash' => isset( $click_data['user_agent_hash'] ) ? $click_data['user_agent_hash'] : '',
-            'is_bot'         => isset( $click_data['is_bot'] ) ? (int) $click_data['is_bot'] : 0,
-        ) );
-
-        if ( false === $result ) {
-            $this->results['errors']++;
-            return false;
+    /**
+     * Imports one source link's clicks in batches. $fetch( $source_link_id, $after_id, $cutoff, $limit ) returns rows
+     * with an 'id', 'clicked_at' and optionally 'referrer', 'country_code', 'user_agent' and 'is_bot'.
+     * The last imported source ID is stored on the link, so a repeat run carries on after it instead of importing
+     * the clicks twice. A link without that marker only takes clicks older than its first recorded click.
+     * Returns false when the time budget ran out before the link's clicks were done.
+     */
+    protected function import_link_clicks( $link_id, $source_link_id, callable $fetch ) {
+        $last_id = $link_id > 0 ? get_post_meta( $link_id, KATINA_Link::LAST_CLICK_META, true ) : '';
+        $cutoff  = '';
+        if ( '' === $last_id || false === $last_id ) {
+            $last_id = 0;
+            if ( $link_id > 0 ) {
+                $cutoff = (string) KATINA_Clicks_DB::get_earliest_clicked_at( $link_id );
+            }
         }
+        $last_id = (int) $last_id;
 
-        $this->results['clicks']++;
-        return true;
+        while ( true ) {
+            $clicks = call_user_func( $fetch, $source_link_id, $last_id, $cutoff, self::CLICK_BATCH );
+            if ( empty( $clicks ) ) {
+                return true;
+            }
+
+            $count   = count( $clicks );
+            $last    = end( $clicks );
+            $last_id = (int) $last['id'];
+
+            if ( $this->dry_run ) {
+                $this->results['clicks'] += $count;
+            } else {
+                $rows = array();
+                foreach ( $clicks as $click ) {
+                    $user_agent = isset( $click['user_agent'] ) ? (string) $click['user_agent'] : '';
+                    $country    = isset( $click['country_code'] ) ? strtoupper( (string) $click['country_code'] ) : '';
+                    $rows[]     = array(
+                        'link_id'         => $link_id,
+                        'clicked_at'      => $click['clicked_at'],
+                        'referrer'        => isset( $click['referrer'] ) ? $this->clean_referrer( $click['referrer'] ) : '',
+                        'country_code'    => preg_match( '/^[A-Z]{2}$/', $country ) ? $country : '',
+                        'user_agent_hash' => $user_agent ? md5( $user_agent ) : '',
+                        'is_bot'          => ! empty( $click['is_bot'] ) || ( $user_agent && KATINA_Bot_Detector::is_bot( $user_agent ) ) ? 1 : 0,
+                    );
+                }
+
+                if ( false === KATINA_Clicks_DB::bulk_insert( $rows ) ) {
+                    $this->results['errors']++;
+                    return true;
+                }
+                $this->results['clicks'] += $count;
+                update_post_meta( $link_id, KATINA_Link::LAST_CLICK_META, $last_id );
+            }
+
+            if ( $count < self::CLICK_BATCH ) {
+                return true;
+            }
+            if ( $this->out_of_time() ) {
+                return false;
+            }
+        }
+    }
+
+    // Referrers are stored without their query string, as the live path does, because they routinely carry personal data.
+    protected function clean_referrer( $referrer ) {
+        $referrer = esc_url_raw( (string) $referrer );
+        if ( '' === $referrer ) {
+            return '';
+        }
+        $parts = wp_parse_url( $referrer );
+        $clean = ( isset( $parts['scheme'], $parts['host'] ) ? $parts['scheme'] . '://' . $parts['host'] : '' )
+               . ( isset( $parts['path'] ) ? $parts['path'] : '' );
+        return substr( $clean, 0, 2048 );
     }
 
     protected function normalize_bool( $value ) {

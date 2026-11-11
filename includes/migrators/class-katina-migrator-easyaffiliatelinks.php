@@ -35,45 +35,80 @@ class KATINA_Migrator_EasyAffiliateLinks extends KATINA_Migrator {
         );
     }
 
+    const SOURCE = 'easyaffiliatelinks';
+
     public function run() {
+        global $wpdb;
         self::register_source_taxonomy( 'eafl_category', 'easy_affiliate_link' );
-        $posts = get_posts( array(
-            'post_type'      => 'easy_affiliate_link',
-            'post_status'    => array( 'publish', 'draft', 'private' ),
-            'posts_per_page' => -1,
-            'no_found_rows'  => true,
-        ) );
+        $has_clicks   = self::table_exists( 'eafl_clicks' );
+        $clicks_table = $wpdb->prefix . 'eafl_clicks';
 
-        foreach ( $posts as $post ) {
-            $meta = get_post_meta( $post->ID );
+        $fetch_clicks = function ( $source_id, $after_id, $cutoff, $limit ) use ( $wpdb, $clicks_table ) {
+            $sql  = "SELECT id, date, referer, agent FROM `{$clicks_table}` WHERE link_id = %d AND id > %d";
+            $args = array( $source_id, $after_id );
+            if ( $cutoff ) {
+                $sql   .= ' AND date < %s';
+                $args[] = $cutoff;
+            }
+            $sql   .= ' ORDER BY id ASC LIMIT %d';
+            $args[] = $limit;
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+            return array_map( function ( $row ) {
+                return array(
+                    'id'         => (int) $row['id'],
+                    'clicked_at' => $row['date'],
+                    'referrer'   => (string) $row['referer'],
+                    'user_agent' => (string) $row['agent'],
+                );
+            }, $rows );
+        };
 
-            $destination_url = isset( $meta['eafl_url'][0] ) ? $meta['eafl_url'][0] : '';
-            $redirect_type   = isset( $meta['eafl_redirect_type'][0] ) ? $meta['eafl_redirect_type'][0] : 'default';
-            $nofollow        = ( isset( $meta['eafl_nofollow'][0] ) && 'nofollow' === $meta['eafl_nofollow'][0] ) ? 'yes' : 'default';
-            $sponsored       = ( isset( $meta['eafl_sponsored'][0] ) && $meta['eafl_sponsored'][0] ) ? 'yes' : 'default';
-            $new_window      = ( isset( $meta['eafl_target'][0] ) && '_blank' === $meta['eafl_target'][0] ) ? 'yes' : 'default';
-            $css_classes     = isset( $meta['eafl_classes'][0] ) ? $meta['eafl_classes'][0] : '';
-
-            $link_id = $this->create_link( array(
-                'old_id'          => $post->ID,
-                'title'           => $post->post_title,
-                'slug'            => $post->post_name,
-                'destination_url' => $destination_url,
-                'redirect_type'   => $redirect_type,
-                'nofollow'        => $nofollow,
-                'sponsored'       => $sponsored,
-                'new_window'      => $new_window,
-                'css_classes'     => $css_classes,
-                'pass_query_str'  => 'default',
-                'rel_tags'        => '',
+        while ( true ) {
+            $ids = $wpdb->get_col( $wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'easy_affiliate_link' AND post_status IN ('publish', 'draft', 'private') AND ID > %d ORDER BY ID ASC LIMIT 100",
+                $this->cursor
             ) );
 
-            if ( ! $link_id ) {
-                continue;
+            if ( empty( $ids ) ) {
+                break;
             }
 
-            $this->migrate_categories( $post->ID, $link_id );
-            $this->migrate_clicks( $post->ID, $link_id );
+            foreach ( $ids as $post_id ) {
+                $post = get_post( (int) $post_id );
+                $meta = get_post_meta( (int) $post_id );
+
+                if ( $post ) {
+                    $link_id = $this->create_link( array(
+                        'source'          => self::SOURCE,
+                        'old_id'          => $post->ID,
+                        'title'           => $post->post_title,
+                        'slug'            => $post->post_name,
+                        'destination_url' => isset( $meta['eafl_url'][0] ) ? $meta['eafl_url'][0] : '',
+                        'redirect_type'   => isset( $meta['eafl_redirect_type'][0] ) ? $meta['eafl_redirect_type'][0] : 'default',
+                        'nofollow'        => ( isset( $meta['eafl_nofollow'][0] ) && 'nofollow' === $meta['eafl_nofollow'][0] ) ? 'yes' : 'default',
+                        'sponsored'       => ( isset( $meta['eafl_sponsored'][0] ) && $meta['eafl_sponsored'][0] ) ? 'yes' : 'default',
+                        'new_window'      => ( isset( $meta['eafl_target'][0] ) && '_blank' === $meta['eafl_target'][0] ) ? 'yes' : 'default',
+                        'css_classes'     => isset( $meta['eafl_classes'][0] ) ? $meta['eafl_classes'][0] : '',
+                        'pass_query_str'  => 'default',
+                        'rel_tags'        => '',
+                    ) );
+
+                    if ( $link_id ) {
+                        $this->migrate_categories( $post->ID, $link_id );
+                        if ( $has_clicks && ! $this->import_link_clicks( $link_id, $post->ID, $fetch_clicks ) ) {
+                            $this->complete = false;
+                            return $this->results;
+                        }
+                    }
+                }
+
+                $this->cursor = (int) $post_id;
+                if ( $this->out_of_time() ) {
+                    $this->complete = false;
+                    return $this->results;
+                }
+            }
         }
 
         return $this->results;
@@ -104,37 +139,6 @@ class KATINA_Migrator_EasyAffiliateLinks extends KATINA_Migrator {
 
         if ( $new_term_ids ) {
             wp_set_object_terms( $link_id, $new_term_ids, 'katina_category' );
-        }
-    }
-
-    private function migrate_clicks( $old_post_id, $link_id ) {
-        global $wpdb;
-
-        $clicks_table = $wpdb->prefix . 'eafl_clicks';
-
-        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $clicks_table ) ) !== $clicks_table ) {
-            return;
-        }
-
-        $clicks = $wpdb->get_results( $wpdb->prepare(
-            "SELECT id, date, referer, agent FROM {$clicks_table} WHERE link_id = %d",
-            $old_post_id
-        ) );
-
-        if ( empty( $clicks ) ) {
-            return;
-        }
-
-        foreach ( $clicks as $click ) {
-            $user_agent = isset( $click->agent ) ? (string) $click->agent : '';
-
-            $this->import_click( $link_id, array(
-                'clicked_at'      => $click->date,
-                'referrer'        => isset( $click->referer ) ? (string) $click->referer : '',
-                'country_code'    => '',
-                'user_agent_hash' => $user_agent ? md5( $user_agent ) : '',
-                'is_bot'          => 0,
-            ) );
         }
     }
 }
