@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_Upgrader {
 
-    const DB_VERSION = '1.3';
+    const DB_VERSION = '1.4';
 
     public static function init() {
         add_action( 'init', array( __CLASS__, 'maybe_upgrade' ), -2 );
@@ -19,7 +19,7 @@ class KATINA_Upgrader {
 
         if ( version_compare( $current, '1.1', '<' ) ) {
             KATINA_Clicks_DB::create_table();
-            self::merge_monitor_bots();
+            self::merge_bots( KATINA_Bot_Detector::MONITOR_BOTS );
         }
 
         if ( version_compare( $current, '1.2', '<' ) ) {
@@ -36,12 +36,16 @@ class KATINA_Upgrader {
             }
         }
 
+        if ( version_compare( $current, '1.4', '<' ) ) {
+            self::merge_bots( array_merge( KATINA_Bot_Detector::PREVIEW_BOTS, KATINA_Bot_Detector::CLIENT_BOTS, KATINA_Bot_Detector::AI_BOTS ) );
+        }
+
         update_option( 'katina_db_version', self::DB_VERSION );
         update_option( 'katina_installed_version', KATINA_VERSION );
     }
 
-    // Adds the monitor/link-checker defaults to a saved list without touching what's already there.
-    private static function merge_monitor_bots() {
+    // Adds new default signatures to a saved list without touching what's already there.
+    private static function merge_bots( array $bots ) {
         $saved = get_option( 'katina_excluded_bots', false );
         if ( ! is_string( $saved ) || '' === trim( $saved ) ) {
             return;
@@ -49,7 +53,7 @@ class KATINA_Upgrader {
 
         $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $saved ) ) ), 'strlen' );
         $have  = array_map( 'strtolower', $lines );
-        foreach ( KATINA_Bot_Detector::MONITOR_BOTS as $bot ) {
+        foreach ( $bots as $bot ) {
             if ( ! in_array( $bot, $have, true ) ) {
                 $lines[] = $bot;
             }
