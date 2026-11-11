@@ -30,6 +30,10 @@ class KATINA_Upgrader {
 
         if ( version_compare( $current, '1.3', '<' ) ) {
             KATINA_Post_Type::grant_capabilities();
+            // Sites already behind Cloudflare keep reading its headers; the upgrade request itself shows whether it is in front.
+            if ( ! empty( $_SERVER['HTTP_CF_RAY'] ) ) {
+                add_option( 'katina_trusted_proxy', 'cloudflare' );
+            }
         }
 
         update_option( 'katina_db_version', self::DB_VERSION );

@@ -63,9 +63,29 @@ class KATINA_Clicks {
         return substr( hash_hmac( 'sha256', $ip . '|' . $user_agent, wp_salt( 'auth' ) . gmdate( 'Y-m-d' ) ), 0, 16 );
     }
 
+    // Forwarded and CDN headers are client-controlled unless a proxy the site trusts sets them. 'auto' trusts them only when the request arrives from a private address, so a proxy on the same network is covered and a direct visitor can't spoof them.
+    public static function trusted_proxy() {
+        $mode = (string) get_option( 'katina_trusted_proxy', 'auto' );
+        if ( 'auto' === $mode ) {
+            $remote = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+            $mode   = $remote && ! filter_var( $remote, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ? 'forwarded' : 'none';
+        }
+        $mode = apply_filters( 'katina_trusted_proxy', $mode );
+        return in_array( $mode, array( 'cloudflare', 'forwarded' ), true ) ? $mode : 'none';
+    }
+
     public static function detect_country() {
         // A CDN-supplied country code carries no IP, so it's read even when IP collection is off.
-        foreach ( array( 'HTTP_CF_IPCOUNTRY', 'HTTP_GEOIP_COUNTRY_CODE', 'HTTP_CLOUDFRONT_VIEWER_COUNTRY' ) as $header ) {
+        $proxy   = self::trusted_proxy();
+        $headers = array();
+        if ( 'cloudflare' === $proxy ) {
+            $headers[] = 'HTTP_CF_IPCOUNTRY';
+        }
+        if ( 'none' !== $proxy ) {
+            $headers[] = 'HTTP_GEOIP_COUNTRY_CODE';
+            $headers[] = 'HTTP_CLOUDFRONT_VIEWER_COUNTRY';
+        }
+        foreach ( $headers as $header ) {
             if ( empty( $_SERVER[ $header ] ) ) {
                 continue;
             }
@@ -95,12 +115,15 @@ class KATINA_Clicks {
     }
 
     private static function get_client_ip() {
-        $headers = array(
-            'HTTP_CF_CONNECTING_IP',
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_REAL_IP',
-            'REMOTE_ADDR',
-        );
+        $proxy   = self::trusted_proxy();
+        $headers = array();
+        if ( 'cloudflare' === $proxy ) {
+            $headers[] = 'HTTP_CF_CONNECTING_IP';
+        }
+        if ( 'none' !== $proxy ) {
+            $headers[] = 'HTTP_X_FORWARDED_FOR';
+            $headers[] = 'HTTP_X_REAL_IP';
+        }
 
         foreach ( $headers as $header ) {
             if ( ! empty( $_SERVER[ $header ] ) ) {
