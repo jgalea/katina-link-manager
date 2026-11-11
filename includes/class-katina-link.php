@@ -162,6 +162,9 @@ class KATINA_Link {
             // Use add_query_arg so query merging is safe instead of naive concat.
             parse_str( $request_query_string, $passed );
             unset( $passed[ self::PAGE_PARAM ] );
+            // Parameters the destination already sets (an affiliate tag, say) stay as the site owner wrote them.
+            parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $existing );
+            $passed = array_diff_key( $passed, $existing );
             if ( ! empty( $passed ) ) {
                 $url = add_query_arg( urlencode_deep( $passed ), $url );
             }
