@@ -43,6 +43,7 @@ $geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', tru
                 <option value="301" <?php selected( $redirect_type, '301' ); ?>>301 (Permanent)</option>
                 <option value="302" <?php selected( $redirect_type, '302' ); ?>>302 (Temporary)</option>
                 <option value="307" <?php selected( $redirect_type, '307' ); ?>>307 (Temporary Strict)</option>
+                <option value="308" <?php selected( $redirect_type, '308' ); ?>>308 (Permanent Strict)</option>
             </select>
         </td>
     </tr>

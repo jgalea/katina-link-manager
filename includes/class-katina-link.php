@@ -32,6 +32,8 @@ class KATINA_Link {
     // A destination containing this token gets the logged click's ID there.
     const CLICK_TOKEN = '[click]';
 
+    const REDIRECT_TYPES = array( '301', '302', '307', '308' );
+
     const SOURCE_META = '_katina_source_id';
 
     const LAST_CLICK_META = '_katina_source_last_click_id';
@@ -58,11 +60,16 @@ class KATINA_Link {
     }
 
     public function get_redirect_type() {
-        $type = get_post_meta( $this->id, self::META_KEYS['redirect_type'], true );
-        if ( ! $type || $type === 'default' ) {
-            $type = get_option( 'katina_redirect_type', '307' );
+        $type = (string) get_post_meta( $this->id, self::META_KEYS['redirect_type'], true );
+        if ( ! in_array( $type, self::REDIRECT_TYPES, true ) ) {
+            $type = (string) get_option( 'katina_redirect_type', '307' );
         }
-        return (int) $type;
+        return in_array( $type, self::REDIRECT_TYPES, true ) ? (int) $type : 307;
+    }
+
+    public static function sanitize_redirect_type( $value ) {
+        $value = trim( (string) $value );
+        return in_array( $value, self::REDIRECT_TYPES, true ) ? $value : 'default';
     }
 
     public function is_nofollow() {
@@ -188,9 +195,13 @@ class KATINA_Link {
         foreach ( self::META_KEYS as $key => $meta_key ) {
             if ( isset( $data[ $key ] ) ) {
                 // sanitize_text_field() strips percent-encoded octets, which breaks affiliate URLs.
-                $value = in_array( $key, array( 'destination_url', 'geo_fallback_url' ), true )
-                    ? esc_url_raw( $data[ $key ], array( 'http', 'https' ) )
-                    : sanitize_text_field( $data[ $key ] );
+                if ( 'redirect_type' === $key ) {
+                    $value = self::sanitize_redirect_type( $data[ $key ] );
+                } else {
+                    $value = in_array( $key, array( 'destination_url', 'geo_fallback_url' ), true )
+                        ? esc_url_raw( $data[ $key ], array( 'http', 'https' ) )
+                        : sanitize_text_field( $data[ $key ] );
+                }
                 update_post_meta( $this->id, $meta_key, $value );
             }
         }

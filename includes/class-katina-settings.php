@@ -108,6 +108,7 @@ class KATINA_Settings {
             '301' => '301 (Permanent)',
             '302' => '302 (Temporary)',
             '307' => '307 (Temporary Strict)',
+            '308' => '308 (Permanent Strict)',
         ) );
         self::add_field( 'katina_nofollow', __( 'Default Nofollow', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ) );
         self::add_field( 'katina_sponsored', __( 'Default Sponsored', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'no', array( 'yes' => 'Yes', 'no' => 'No', 'never' => 'Never' ), __( 'Never removes rel="sponsored" from every link, including links set to Yes.', 'katina-link-manager' ) );

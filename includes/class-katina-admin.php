@@ -203,7 +203,8 @@ class KATINA_Admin {
         foreach ( $text_fields as $field ) {
             $post_key = 'katina_' . $field;
             if ( isset( $_POST[ $post_key ] ) ) {
-                update_post_meta( $post_id, '_katina_' . $field, sanitize_text_field( wp_unslash( $_POST[ $post_key ] ) ) );
+                $value = sanitize_text_field( wp_unslash( $_POST[ $post_key ] ) );
+                update_post_meta( $post_id, '_katina_' . $field, 'redirect_type' === $field ? KATINA_Link::sanitize_redirect_type( $value ) : $value );
             }
         }
     }
