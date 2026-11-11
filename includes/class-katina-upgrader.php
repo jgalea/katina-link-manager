@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_Upgrader {
 
-    const DB_VERSION = '1.5';
+    const DB_VERSION = '1.6';
 
     public static function init() {
         add_action( 'init', array( __CLASS__, 'maybe_upgrade' ), -2 );
@@ -44,8 +44,29 @@ class KATINA_Upgrader {
             KATINA_Clicks_DB::create_table();
         }
 
+        if ( version_compare( $current, '1.6', '<' ) ) {
+            self::tag_pretty_links_imports();
+        }
+
         update_option( 'katina_db_version', self::DB_VERSION );
         update_option( 'katina_installed_version', KATINA_VERSION );
+    }
+
+    // Links imported from Pretty Links by earlier versions carry no source mark, and the root-level fallback now relies on it.
+    private static function tag_pretty_links_imports() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'prli_links';
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+            return;
+        }
+
+        $rows = $wpdb->get_results( "SELECT id, slug FROM `{$table}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        foreach ( $rows as $row ) {
+            $link = KATINA_Link::find_by_slug( $row->slug );
+            if ( $link && '' === (string) get_post_meta( $link->get_id(), KATINA_Link::SOURCE_META, true ) ) {
+                update_post_meta( $link->get_id(), KATINA_Link::SOURCE_META, 'prettylinks:' . (int) $row->id );
+            }
+        }
     }
 
     // Adds new default signatures to a saved list without touching what's already there.

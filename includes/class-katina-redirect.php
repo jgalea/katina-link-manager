@@ -71,6 +71,12 @@ class KATINA_Redirect {
             return;
         }
 
+        // Pretty Links served its links from the site root, so links imported from it keep working there. Any other link needs the setting.
+        $imported_from_pl = 0 === strpos( (string) get_post_meta( $link->get_id(), KATINA_Link::SOURCE_META, true ), 'prettylinks:' );
+        if ( ! $imported_from_pl && 'yes' !== get_option( 'katina_root_fallback', 'no' ) ) {
+            return;
+        }
+
         self::do_redirect( $link );
     }
 
