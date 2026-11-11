@@ -10,6 +10,8 @@ class KATINA_Admin {
     public static function init() {
         add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_boxes' ) );
         add_action( 'save_post_katina_link', array( __CLASS__, 'save_link_meta' ), 10, 2 );
+        add_action( 'bulk_edit_custom_box', array( __CLASS__, 'render_bulk_edit' ), 10, 2 );
+        add_action( 'save_post_katina_link', array( __CLASS__, 'save_bulk_edit' ), 11 );
         add_filter( 'wp_insert_post_data', array( __CLASS__, 'apply_custom_slug' ), 10, 2 );
         add_action( 'wp_ajax_katina_check_slug', array( __CLASS__, 'ajax_check_slug' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
@@ -178,6 +180,77 @@ class KATINA_Admin {
         <?php
     }
 
+    private static function bulk_edit_fields() {
+        $site_default = __( 'Site default', 'katina-link-manager' );
+        $yes_no       = array(
+            'yes'     => __( 'Yes', 'katina-link-manager' ),
+            'no'      => __( 'No', 'katina-link-manager' ),
+            'default' => $site_default,
+        );
+        return array(
+            'redirect_type'  => array(
+                'label'   => __( 'Redirect type', 'katina-link-manager' ),
+                'options' => array(
+                    '301'     => '301',
+                    '302'     => '302',
+                    '307'     => '307',
+                    '308'     => '308',
+                    'default' => $site_default,
+                ),
+            ),
+            'nofollow'       => array( 'label' => __( 'Nofollow', 'katina-link-manager' ), 'options' => $yes_no ),
+            'sponsored'      => array( 'label' => __( 'Sponsored', 'katina-link-manager' ), 'options' => $yes_no ),
+            'new_window'     => array( 'label' => __( 'Open in new window', 'katina-link-manager' ), 'options' => $yes_no ),
+            'pass_query_str' => array( 'label' => __( 'Pass query strings', 'katina-link-manager' ), 'options' => $yes_no ),
+        );
+    }
+
+    public static function render_bulk_edit( $column, $post_type ) {
+        if ( 'katina_link' !== $post_type || 'katina_destination' !== $column ) {
+            return;
+        }
+        ?>
+        <fieldset class="inline-edit-col-right katina-bulk-edit">
+            <div class="inline-edit-col">
+                <span class="title"><?php esc_html_e( 'Link settings', 'katina-link-manager' ); ?></span>
+                <?php wp_nonce_field( 'katina_bulk_edit', 'katina_bulk_nonce' ); ?>
+                <?php foreach ( self::bulk_edit_fields() as $field => $config ) : ?>
+                    <label>
+                        <span class="title"><?php echo esc_html( $config['label'] ); ?></span>
+                        <select name="katina_bulk_<?php echo esc_attr( $field ); ?>">
+                            <option value=""><?php esc_html_e( '&mdash; No change &mdash;', 'katina-link-manager' ); ?></option>
+                            <?php foreach ( $config['options'] as $value => $label ) : ?>
+                                <option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+        </fieldset>
+        <?php
+    }
+
+    public static function save_bulk_edit( $post_id ) {
+        if ( empty( $_REQUEST['bulk_edit'] ) || ! isset( $_REQUEST['katina_bulk_nonce'] ) ) {
+            return;
+        }
+        if ( ! wp_verify_nonce( sanitize_key( wp_unslash( $_REQUEST['katina_bulk_nonce'] ) ), 'katina_bulk_edit' ) || ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        foreach ( self::bulk_edit_fields() as $field => $config ) {
+            $key = 'katina_bulk_' . $field;
+            if ( ! isset( $_REQUEST[ $key ] ) ) {
+                continue;
+            }
+            $value = sanitize_text_field( wp_unslash( $_REQUEST[ $key ] ) );
+            if ( '' === $value || ! isset( $config['options'][ $value ] ) ) {
+                continue;
+            }
+            update_post_meta( $post_id, '_katina_' . $field, $value );
+        }
+    }
+
     public static function apply_custom_slug( $data, $postarr ) {
         if ( 'katina_link' !== $data['post_type'] || ! isset( $_POST['katina_slug'], $_POST['katina_link_nonce'] ) ) {
             return $data;
@@ -266,6 +339,20 @@ class KATINA_Admin {
         if ( isset( $_POST['katina_geo_fallback_url'] ) ) {
             $fallback = esc_url_raw( wp_unslash( $_POST['katina_geo_fallback_url'] ) );
             update_post_meta( $post_id, '_katina_geo_fallback_url', KATINA_Link::is_safe_destination( $fallback ) ? $fallback : '' );
+        }
+
+        if ( isset( $_POST['katina_expires_at'] ) ) {
+            $expires_at = sanitize_text_field( wp_unslash( $_POST['katina_expires_at'] ) );
+            $timestamp  = '' === $expires_at ? 0 : (int) get_gmt_from_date( str_replace( 'T', ' ', $expires_at ), 'U' );
+            update_post_meta( $post_id, '_katina_expires_at', $timestamp > 0 ? $timestamp : '' );
+        }
+        if ( isset( $_POST['katina_max_clicks'] ) ) {
+            $max_clicks = absint( wp_unslash( $_POST['katina_max_clicks'] ) );
+            update_post_meta( $post_id, '_katina_max_clicks', $max_clicks > 0 ? $max_clicks : '' );
+        }
+        if ( isset( $_POST['katina_expired_url'] ) ) {
+            $expired_url = esc_url_raw( wp_unslash( $_POST['katina_expired_url'] ) );
+            update_post_meta( $post_id, '_katina_expired_url', KATINA_Link::is_safe_destination( $expired_url ) ? $expired_url : '' );
         }
 
         $text_fields = array( 'redirect_type', 'nofollow', 'sponsored', 'new_window', 'pass_query_str', 'css_classes', 'rel_tags', 'sub_id_param', 'click_id_param', 'geo_countries' );
