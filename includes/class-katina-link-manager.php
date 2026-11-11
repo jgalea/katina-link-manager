@@ -39,6 +39,7 @@ final class Katina_Link_Manager {
             KATINA_Reports::init();
             KATINA_Link_Report::init();
             KATINA_Tools::init();
+            KATINA_Migration_Ajax::init();
             KATINA_CSV::init();
             KATINA_Setup_Wizard::init();
         }

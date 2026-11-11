@@ -71,6 +71,12 @@ class KATINA_Redirect {
             return;
         }
 
+        // Pretty Links served its links from the site root, so links imported from it keep working there. Any other link needs the setting.
+        $imported_from_pl = 0 === strpos( (string) get_post_meta( $link->get_id(), KATINA_Link::SOURCE_META, true ), 'prettylinks:' );
+        if ( ! $imported_from_pl && 'yes' !== get_option( 'katina_root_fallback', 'no' ) ) {
+            return;
+        }
+
         self::do_redirect( $link );
     }
 
@@ -116,6 +122,12 @@ class KATINA_Redirect {
             if ( '' !== $click_id && '' !== $link->get_click_id_param() ) {
                 $destination = add_query_arg( $link->get_click_id_param(), $click_id, $destination );
             }
+        }
+
+        // An expired link sends visitors to its expiry URL, or is treated as not found when it has none.
+        if ( $link->is_expired() ) {
+            $destination = $link->get_expired_url();
+            $track       = false;
         }
 
         if ( ! $destination || ! KATINA_Link::is_safe_destination( $destination ) ) {

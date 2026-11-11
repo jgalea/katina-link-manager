@@ -10,7 +10,7 @@ class KATINA_Link_Fixer {
     const RATE_LIMIT_MAX       = 30;   // requests per window per IP
 
     public static function init() {
-        if ( get_option( 'katina_enable_link_fixer', 'yes' ) !== 'yes' ) {
+        if ( get_option( 'katina_enable_link_fixer', 'no' ) !== 'yes' ) {
             return;
         }
 
@@ -36,14 +36,13 @@ class KATINA_Link_Fixer {
 
         wp_localize_script( 'katina-link-fixer', 'katinaLinkFixer', array(
             'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
-            'nonce'      => wp_create_nonce( 'katina_link_fixer' ),
             'linkPrefix' => home_url( $prefix . '/' ),
             'homeUrl'    => home_url( '/' ),
         ) );
     }
 
     public static function ajax_handler() {
-        check_ajax_referer( 'katina_link_fixer', 'nonce' );
+        // No nonce: full-page caches serve a stale one, and the response only holds the public rel, target and class of links already on the page.
 
         // Per-IP rate limit (window-based transient counter).
         $ip   = isset( $_SERVER['REMOTE_ADDR'] ) ? filter_var( sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ), FILTER_VALIDATE_IP ) : '';

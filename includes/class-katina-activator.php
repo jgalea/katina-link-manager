@@ -10,6 +10,7 @@ class KATINA_Activator {
         KATINA_Link_Index::create_table();
         self::migrate_legacy_data();
         self::set_default_options();
+        KATINA_Post_Type::grant_capabilities();
         // Link health checks make outbound HTTP requests, so they stay off until
         // the user explicitly enables them. Enabling the setting schedules the cron.
         KATINA_Privacy::schedule();
@@ -110,7 +111,7 @@ class KATINA_Activator {
             'katina_pass_query_str'        => 'no',
             'katina_enable_click_tracking' => 'yes',
             'katina_disable_ip_collection' => 'yes',
-            'katina_enable_link_fixer'     => 'yes',
+            'katina_enable_link_fixer'     => 'no',
             'katina_enable_link_health'    => 'no',
             'katina_clicks_retention_days' => KATINA_Privacy::DEFAULT_RETENTION_DAYS,
             'katina_excluded_bots'         => KATINA_Bot_Detector::default_list(),

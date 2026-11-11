@@ -4,7 +4,7 @@ Tags: affiliate links, link management, link cloaking, redirect, link tracking
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,7 +17,7 @@ Katina Link Manager helps you manage all your outbound links in one place. Creat
 **Why Katina Link Manager?**
 
 * Zero nag screens, zero upsell banners, zero review popups
-* GDPR-compliant click tracking (no IP addresses stored by default)
+* Privacy-minded click tracking (no IP addresses stored by default)
 * One-click migration from ThirstyAffiliates, Pretty Links, LinkCentral, and Easy Affiliate Links
 * Link health monitoring catches broken links before your visitors do
 * Ad-blocker safe
@@ -53,9 +53,9 @@ Katina Link Manager helps you manage all your outbound links in one place. Creat
 
 No. Never. This is a core principle of Katina Link Manager.
 
-= Is click tracking GDPR compliant? =
+= Does click tracking store IP addresses? =
 
-Yes. By default, Katina Link Manager does not store IP addresses. Country data is derived at click time and the IP is immediately discarded.
+No. By default, Katina Link Manager does not store IP addresses. Country data is derived at click time and the IP is immediately discarded. Unique-click counts use a one-way hash of the IP and browser under a random salt that is replaced every day, so earlier days can't be reconstructed. Whether your use of click tracking meets GDPR depends on your own setup, so check it against your privacy policy.
 
 = Can I migrate from ThirstyAffiliates or Pretty Links? =
 
@@ -74,6 +74,26 @@ Link health monitoring is optional and turned off by default. When you enable it
 5. Guided setup wizard with automatic migration detection.
 
 == Changelog ==
+
+= 1.7.0 =
+* Changed: query strings passed through a cloaked link no longer overwrite parameters already in the destination URL. An affiliate tag in the destination, such as an Amazon `tag`, now always wins, and parameters the destination doesn't have are still passed through. Links that relied on a visitor-supplied value replacing a destination parameter now keep the destination's value.
+* New: link expiration by date or by number of clicks, with an expiry URL for visitors after that.
+* New: bulk edit redirect type, nofollow, sponsored, new window and query string pass-through from the links list.
+* New: weekly or daily email digest of broken links, off by default.
+* New: slug field on the link screen with a live preview and a warning when a slug is already taken.
+* New: migrations run in batches with progress and a preview, resume where they stopped, can be re-run without creating duplicates, and offer to adopt the ThirstyAffiliates prefix.
+* New: settings to trust a proxy for visitor IP and country headers, skip storing bot clicks, keep data on uninstall and enable the root-level slug fallback.
+* Changed: links have their own capabilities. Authors and other roles can no longer publish links or see site-wide click totals; Administrators and Editors get access automatically. To give a role access back, add the edit_katina_links, edit_published_katina_links, publish_katina_links, delete_katina_links and delete_published_katina_links capabilities to it with a role editor plugin or `get_role( 'author' )->add_cap()`.
+* Changed: Link Health keeps checking in the background until every link has been checked.
+* Changed: Link Fixer is off by default on new installs and works on cached pages.
+* Changed: the bot list now includes link previews, HTTP clients and AI crawlers, and is merged into saved lists.
+* Changed: the root-level slug fallback only applies to links imported from Pretty Links, unless enabled in settings.
+* Changed: visitor hashes use a random daily salt.
+* Fixed: an invalid redirect type no longer causes a server error.
+* Fixed: importing an empty or draft-only CSV no longer fails, and CSV export neutralizes spreadsheet formulas.
+* Fixed: the Copy URL button on subdirectory installs.
+* Fixed: REST reads of links and their taxonomies require link access, and the editor link search requires edit access.
+* Fixed: Link Health connects to the address that passed the private-address check.
 
 = 1.6.0 =
 * New: every tracked click gets a random click ID and records the page it came from. Set a Click ID Parameter on a link, or put [click] in its destination, to pass the ID to affiliate networks that accept one.

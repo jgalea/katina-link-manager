@@ -36,11 +36,100 @@ class KATINA_Migrator_LinkCentral extends KATINA_Migrator {
 		);
 	}
 
+	const SOURCE = 'linkcentral';
+
 	public function run() {
+		global $wpdb;
 		self::register_source_taxonomy( 'linkcentral_category', 'linkcentral_link' );
-		$this->migrate_categories();
-		$this->migrate_links();
-		$this->migrate_clicks();
+		if ( 0 === $this->cursor ) {
+			$this->migrate_categories();
+		}
+		$category_map = $this->build_category_map();
+		$has_clicks   = self::table_exists( 'linkcentral_stats' );
+		$stats_table  = $wpdb->prefix . 'linkcentral_stats';
+
+		$fetch_clicks = function ( $source_id, $after_id, $cutoff, $limit ) use ( $wpdb, $stats_table ) {
+			$sql  = "SELECT * FROM `{$stats_table}` WHERE link_id = %d AND id > %d";
+			$args = array( $source_id, $after_id );
+			if ( $cutoff ) {
+				$sql   .= ' AND click_date < %s';
+				$args[] = $cutoff;
+			}
+			$sql   .= ' ORDER BY id ASC LIMIT %d';
+			$args[] = $limit;
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+			return array_map( function ( $row ) {
+				return array(
+					'id'           => (int) $row['id'],
+					'clicked_at'   => $row['click_date'],
+					'referrer'     => isset( $row['referring_url'] ) ? $row['referring_url'] : '',
+					'country_code' => isset( $row['country'] ) ? $row['country'] : '',
+					'user_agent'   => isset( $row['user_agent'] ) ? $row['user_agent'] : '',
+				);
+			}, $rows );
+		};
+
+		while ( true ) {
+			$ids = $wpdb->get_col( $wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'linkcentral_link' AND post_status NOT IN ('trash', 'auto-draft') AND ID > %d ORDER BY ID ASC LIMIT 100",
+				$this->cursor
+			) );
+
+			if ( empty( $ids ) ) {
+				break;
+			}
+
+			foreach ( $ids as $post_id ) {
+				$post_id = (int) $post_id;
+				$post    = get_post( $post_id );
+
+				if ( $post ) {
+					$new_link_id = $this->create_link( array(
+						'source'          => self::SOURCE,
+						'old_id'          => $post_id,
+						'title'           => $post->post_title,
+						'slug'            => $post->post_name,
+						'destination_url' => get_post_meta( $post_id, '_linkcentral_destination_url', true ),
+						'redirect_type'   => get_post_meta( $post_id, '_linkcentral_redirection_type', true ) ?: 'default',
+						'nofollow'        => $this->normalize_bool( get_post_meta( $post_id, '_linkcentral_nofollow', true ) ),
+						'sponsored'       => $this->normalize_bool( get_post_meta( $post_id, '_linkcentral_sponsored', true ) ),
+						'new_window'      => $this->normalize_bool( get_post_meta( $post_id, '_linkcentral_new_tab', true ) ),
+						'css_classes'     => get_post_meta( $post_id, '_linkcentral_custom_css_classes', true ) ?: '',
+						'pass_query_str'  => $this->normalize_bool( get_post_meta( $post_id, '_linkcentral_parameter_forwarding', true ) ),
+					) );
+
+					if ( $new_link_id ) {
+						if ( $new_link_id > 0 ) {
+							$terms = wp_get_object_terms( $post_id, 'linkcentral_category', array( 'fields' => 'ids' ) );
+							if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
+								$katina_term_ids = array();
+								foreach ( $terms as $term_id ) {
+									if ( isset( $category_map[ $term_id ] ) ) {
+										$katina_term_ids[] = $category_map[ $term_id ];
+									}
+								}
+								if ( $katina_term_ids ) {
+									wp_set_object_terms( $new_link_id, $katina_term_ids, 'katina_category' );
+								}
+							}
+						}
+
+						if ( $has_clicks && ! $this->import_link_clicks( $new_link_id, $post_id, $fetch_clicks ) ) {
+							$this->complete = false;
+							return $this->results;
+						}
+					}
+				}
+
+				$this->cursor = $post_id;
+				if ( $this->out_of_time() ) {
+					$this->complete = false;
+					return $this->results;
+				}
+			}
+		}
+
 		return $this->results;
 	}
 
@@ -71,119 +160,6 @@ class KATINA_Migrator_LinkCentral extends KATINA_Migrator {
 		}
 
 		return $term_id_map;
-	}
-
-	private function migrate_links() {
-		$category_map = $this->build_category_map();
-
-		$paged = 1;
-
-		do {
-			$query = new WP_Query( array(
-				'post_type'      => 'linkcentral_link',
-				'post_status'    => 'any',
-				'posts_per_page' => 100,
-				'paged'          => $paged,
-				'fields'         => 'ids',
-				'no_found_rows'  => false,
-			) );
-
-			if ( empty( $query->posts ) ) {
-				break;
-			}
-
-			foreach ( $query->posts as $post_id ) {
-				$post = get_post( $post_id );
-				if ( ! $post ) {
-					continue;
-				}
-
-				$redirect_type = get_post_meta( $post_id, '_linkcentral_redirection_type', true );
-				$nofollow      = get_post_meta( $post_id, '_linkcentral_nofollow', true );
-				$new_tab       = get_post_meta( $post_id, '_linkcentral_new_tab', true );
-				$sponsored     = get_post_meta( $post_id, '_linkcentral_sponsored', true );
-				$pass_query    = get_post_meta( $post_id, '_linkcentral_parameter_forwarding', true );
-				$css_classes   = get_post_meta( $post_id, '_linkcentral_custom_css_classes', true );
-				$dest_url      = get_post_meta( $post_id, '_linkcentral_destination_url', true );
-
-				$new_link_id = $this->create_link( array(
-					'old_id'          => $post_id,
-					'title'           => $post->post_title,
-					'slug'            => $post->post_name,
-					'destination_url' => $dest_url,
-					'redirect_type'   => $redirect_type ? $redirect_type : 'default',
-					'nofollow'        => $this->normalize_bool( $nofollow ),
-					'sponsored'       => $this->normalize_bool( $sponsored ),
-					'new_window'      => $this->normalize_bool( $new_tab ),
-					'css_classes'     => $css_classes ? $css_classes : '',
-					'pass_query_str'  => $this->normalize_bool( $pass_query ),
-				) );
-
-				if ( ! $new_link_id ) {
-					continue;
-				}
-
-				$terms = wp_get_object_terms( $post_id, 'linkcentral_category', array( 'fields' => 'ids' ) );
-				if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
-					$katina_term_ids = array();
-					foreach ( $terms as $term_id ) {
-						if ( isset( $category_map[ $term_id ] ) ) {
-							$katina_term_ids[] = $category_map[ $term_id ];
-						}
-					}
-					if ( $katina_term_ids ) {
-						wp_set_object_terms( $new_link_id, $katina_term_ids, 'katina_category' );
-					}
-				}
-			}
-
-			$paged++;
-		} while ( $paged <= $query->max_num_pages );
-	}
-
-	private function migrate_clicks() {
-		global $wpdb;
-
-		$table = $wpdb->prefix . 'linkcentral_stats';
-
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
-			return;
-		}
-
-		$offset     = 0;
-		$batch_size = 500;
-
-		do {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM `{$table}` ORDER BY id ASC LIMIT %d OFFSET %d",
-					$batch_size,
-					$offset
-				)
-			);
-
-			if ( empty( $rows ) ) {
-				break;
-			}
-
-			foreach ( $rows as $row ) {
-				if ( ! isset( $this->id_map[ $row->link_id ] ) ) {
-					continue;
-				}
-
-				$new_link_id = $this->id_map[ $row->link_id ];
-
-				$this->import_click( $new_link_id, array(
-					'clicked_at'      => $row->click_date,
-					'referrer'        => isset( $row->referring_url ) ? $row->referring_url : '',
-					'country_code'    => isset( $row->country ) ? $row->country : '',
-					'user_agent_hash' => isset( $row->user_agent ) ? md5( $row->user_agent ) : '',
-					'is_bot'          => 0,
-				) );
-			}
-
-			$offset += $batch_size;
-		} while ( count( $rows ) === $batch_size );
 	}
 
 	private function build_category_map() {

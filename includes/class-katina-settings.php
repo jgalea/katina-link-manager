@@ -13,6 +13,8 @@ class KATINA_Settings {
         add_action( 'update_option_katina_link_prefix', array( __CLASS__, 'schedule_rewrite_flush' ) );
         add_action( 'update_option_katina_enable_link_health', array( __CLASS__, 'on_link_health_toggle' ), 10, 2 );
         add_action( 'add_option_katina_enable_link_health', array( __CLASS__, 'on_link_health_added' ), 10, 2 );
+        add_action( 'update_option_katina_health_digest', array( 'KATINA_Link_Health', 'schedule_digest' ) );
+        add_action( 'add_option_katina_health_digest', array( 'KATINA_Link_Health', 'schedule_digest' ) );
         add_action( 'init', array( __CLASS__, 'maybe_flush_rewrites' ), 99 );
     }
 
@@ -21,7 +23,7 @@ class KATINA_Settings {
         if ( get_option( 'katina_blank_options_repaired' ) ) {
             return;
         }
-        $never_empty = array( 'katina_link_prefix', 'katina_redirect_type', 'katina_nofollow', 'katina_sponsored', 'katina_new_window', 'katina_pass_query_str', 'katina_content_link_attributes', 'katina_enable_click_tracking', 'katina_disable_ip_collection', 'katina_enable_link_fixer', 'katina_enable_link_health' );
+        $never_empty = array( 'katina_link_prefix', 'katina_redirect_type', 'katina_nofollow', 'katina_sponsored', 'katina_new_window', 'katina_pass_query_str', 'katina_content_link_attributes', 'katina_enable_click_tracking', 'katina_disable_ip_collection', 'katina_enable_link_fixer', 'katina_enable_link_health', 'katina_trusted_proxy', 'katina_store_bot_clicks', 'katina_remove_data_on_uninstall' );
         foreach ( $never_empty as $option ) {
             if ( '' === get_option( $option ) ) {
                 delete_option( $option );
@@ -108,10 +110,12 @@ class KATINA_Settings {
             '301' => '301 (Permanent)',
             '302' => '302 (Temporary)',
             '307' => '307 (Temporary Strict)',
+            '308' => '308 (Permanent Strict)',
         ) );
         self::add_field( 'katina_nofollow', __( 'Default Nofollow', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ) );
         self::add_field( 'katina_sponsored', __( 'Default Sponsored', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'no', array( 'yes' => 'Yes', 'no' => 'No', 'never' => 'Never' ), __( 'Never removes rel="sponsored" from every link, including links set to Yes.', 'katina-link-manager' ) );
         self::add_field( 'katina_new_window', __( 'Default Open in New Window', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ) );
+        self::add_field( 'katina_root_fallback', __( 'Links at the Site Root', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'no', array( 'yes' => 'Yes', 'no' => 'No' ), __( 'Also send visitors who reach /slug/ on a missing page to the link with that slug. Links imported from Pretty Links always work this way.', 'katina-link-manager' ) );
         self::add_field( 'katina_content_link_attributes', __( 'Apply to Links in Content', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ), __( 'Adds each link\'s rel and new-window settings to links you pasted into posts by hand. Attributes already on the link are kept.', 'katina-link-manager' ) );
         self::add_field( 'katina_pass_query_str', __( 'Default Pass Query Strings', 'katina-link-manager' ), 'select', 'katina_link_defaults', 'katina-settings-general', 'no', array( 'yes' => 'Yes', 'no' => 'No' ) );
 
@@ -127,14 +131,28 @@ class KATINA_Settings {
 
         self::add_field( 'katina_enable_click_tracking', __( 'Enable Click Tracking', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ) );
         self::add_field( 'katina_disable_ip_collection', __( 'Disable IP Collection (GDPR)', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes (recommended)', 'no' => 'No' ) );
+        self::add_field( 'katina_store_bot_clicks', __( 'Store Bot Clicks', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'yes', array( 'yes' => 'Yes', 'no' => 'No' ), __( 'Bot clicks are kept out of your totals either way. Choose No to stop saving them, which keeps the click log smaller on busy sites.', 'katina-link-manager' ) );
+        self::add_field( 'katina_trusted_proxy', __( 'Trusted Proxy', 'katina-link-manager' ), 'select', 'katina_tracking', 'katina-settings-tracking', 'auto', array(
+            'auto'       => __( 'Automatic', 'katina-link-manager' ),
+            'none'       => __( 'None (use the connecting IP)', 'katina-link-manager' ),
+            'cloudflare' => __( 'Cloudflare', 'katina-link-manager' ),
+            'cloudfront' => __( 'Amazon CloudFront', 'katina-link-manager' ),
+            'forwarded'  => __( 'Reverse proxy or load balancer', 'katina-link-manager' ),
+        ), __( 'Which proxy to trust for visitor IPs and country headers. Automatic reads the forwarded address chain only when the request comes from a private address, and reads no country headers. Choose Cloudflare or Amazon CloudFront if the site sits behind it to use their country headers.', 'katina-link-manager' ) );
         self::add_field( 'katina_excluded_bots', __( 'Excluded Bots (one per line)', 'katina-link-manager' ), 'textarea', 'katina_tracking', 'katina-settings-tracking' );
         self::add_field( 'katina_clicks_retention_days', __( 'Click Log Retention (days)', 'katina-link-manager' ), 'int', 'katina_tracking', 'katina-settings-tracking', (string) KATINA_Privacy::DEFAULT_RETENTION_DAYS, array(), __( 'Click records, including click IDs and source pages, older than this are deleted automatically each day. Set to 0 to keep forever (not GDPR-recommended).', 'katina-link-manager' ) );
+
+        add_settings_section( 'katina_data', __( 'Data', 'katina-link-manager' ), null, 'katina-settings-general' );
+
+        self::add_field( 'katina_remove_data_on_uninstall', __( 'Remove Data on Uninstall', 'katina-link-manager' ), 'select', 'katina_data', 'katina-settings-general', 'no', array( 'yes' => 'Yes', 'no' => 'No' ), __( 'Deleting the plugin removes every link, category and click record when this is Yes. With No, your data stays in the database for a reinstall.', 'katina-link-manager' ) );
 
         // Modules tab
         add_settings_section( 'katina_modules', __( 'Modules', 'katina-link-manager' ), array( __CLASS__, 'render_modules_section_intro' ), 'katina-settings-modules' );
 
-        self::add_field( 'katina_enable_link_fixer', __( 'Link Fixer', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'yes', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Rewrites outbound links in post content based on your rules.', 'katina-link-manager' ) );
+        self::add_field( 'katina_enable_link_fixer', __( 'Link Fixer', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Applies each cloaked link\'s rel, target and class in the visitor\'s browser, for links that themes or page builders output outside post content. Links in post content already get these when the page is built, so this adds a request to every page that has a cloaked link.', 'katina-link-manager' ) );
         self::add_field( 'katina_enable_link_health', __( 'Link Health Checks', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Off by default. When enabled, the plugin periodically sends outbound HTTP requests to each link\'s destination URL to detect broken or error responses.', 'katina-link-manager' ) );
+        self::add_field( 'katina_health_digest', __( 'Broken Link Email', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'no' => 'Off', 'weekly' => 'Weekly', 'daily' => 'Daily' ), __( 'Emails you the links that link health checks have marked broken. Nothing is sent when every link is healthy. Needs Link Health Checks to be enabled.', 'katina-link-manager' ) );
+        self::add_field( 'katina_health_digest_email', __( 'Broken Link Email Address', 'katina-link-manager' ), 'text', 'katina_modules', 'katina-settings-modules', '', array(), __( 'Leave blank to use the site admin email.', 'katina-link-manager' ) );
     }
 
     public static function render_modules_section_intro() {

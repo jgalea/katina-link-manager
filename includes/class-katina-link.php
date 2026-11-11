@@ -21,6 +21,9 @@ class KATINA_Link {
         'click_id_param'     => '_katina_click_id_param',
         'geo_countries'      => '_katina_geo_countries',
         'geo_fallback_url'   => '_katina_geo_fallback_url',
+        'expires_at'         => '_katina_expires_at',
+        'max_clicks'         => '_katina_max_clicks',
+        'expired_url'        => '_katina_expired_url',
     );
 
     // Set on cloaked links in post content so a link knows which page it was clicked on.
@@ -31,6 +34,8 @@ class KATINA_Link {
 
     // A destination containing this token gets the logged click's ID there.
     const CLICK_TOKEN = '[click]';
+
+    const REDIRECT_TYPES = array( '301', '302', '307', '308' );
 
     const SOURCE_META = '_katina_source_id';
 
@@ -58,11 +63,16 @@ class KATINA_Link {
     }
 
     public function get_redirect_type() {
-        $type = get_post_meta( $this->id, self::META_KEYS['redirect_type'], true );
-        if ( ! $type || $type === 'default' ) {
-            $type = get_option( 'katina_redirect_type', '307' );
+        $type = (string) get_post_meta( $this->id, self::META_KEYS['redirect_type'], true );
+        if ( ! in_array( $type, self::REDIRECT_TYPES, true ) ) {
+            $type = (string) get_option( 'katina_redirect_type', '307' );
         }
-        return (int) $type;
+        return in_array( $type, self::REDIRECT_TYPES, true ) ? (int) $type : 307;
+    }
+
+    public static function sanitize_redirect_type( $value ) {
+        $value = trim( (string) $value );
+        return in_array( $value, self::REDIRECT_TYPES, true ) ? $value : 'default';
     }
 
     public function is_nofollow() {
@@ -125,6 +135,21 @@ class KATINA_Link {
         return self::is_safe_destination( $url ) ? $url : '';
     }
 
+    public function get_expired_url() {
+        $url = (string) get_post_meta( $this->id, self::META_KEYS['expired_url'], true );
+        return self::is_safe_destination( $url ) ? $url : '';
+    }
+
+    // A link expires at a date (stored as a UTC timestamp) or after a number of human clicks, whichever comes first.
+    public function is_expired() {
+        $expires_at = (int) get_post_meta( $this->id, self::META_KEYS['expires_at'], true );
+        if ( $expires_at && time() >= $expires_at ) {
+            return true;
+        }
+        $max_clicks = (int) get_post_meta( $this->id, self::META_KEYS['max_clicks'], true );
+        return $max_clicks > 0 && KATINA_Clicks_DB::get_total_clicks( $this->id ) >= $max_clicks;
+    }
+
     public function is_geo_excluded( $country ) {
         $list = preg_split( '/[\s,]+/', strtoupper( (string) get_post_meta( $this->id, self::META_KEYS['geo_countries'], true ) ), -1, PREG_SPLIT_NO_EMPTY );
         return '' !== $country && in_array( $country, $list, true );
@@ -159,11 +184,18 @@ class KATINA_Link {
             (string) $this->get_destination_url()
         );
         if ( $this->passes_query_string() && $request_query_string ) {
-            // Use add_query_arg so query merging is safe instead of naive concat.
             parse_str( $request_query_string, $passed );
             unset( $passed[ self::PAGE_PARAM ] );
-            if ( ! empty( $passed ) ) {
-                $url = add_query_arg( urlencode_deep( $passed ), $url );
+            $passed = array_filter( $passed, function ( $key ) {
+                return (bool) preg_match( '/^[A-Za-z0-9_.\-]+(\[\])?$/', (string) $key );
+            }, ARRAY_FILTER_USE_KEY );
+            $parts = explode( '#', $url, 2 );
+            $base  = explode( '?', $parts[0], 2 );
+            parse_str( $base[1] ?? '', $existing );
+            // Parameters the destination already sets (an affiliate tag, a redirector's url) stay as the site owner wrote them.
+            $merged = $existing + $passed;
+            if ( count( $merged ) > count( $existing ) ) {
+                $url = $base[0] . '?' . http_build_query( $merged, '', '&', PHP_QUERY_RFC3986 ) . ( isset( $parts[1] ) ? '#' . $parts[1] : '' );
             }
         }
         return $url;
@@ -185,19 +217,23 @@ class KATINA_Link {
         foreach ( self::META_KEYS as $key => $meta_key ) {
             if ( isset( $data[ $key ] ) ) {
                 // sanitize_text_field() strips percent-encoded octets, which breaks affiliate URLs.
-                $value = in_array( $key, array( 'destination_url', 'geo_fallback_url' ), true )
-                    ? esc_url_raw( $data[ $key ], array( 'http', 'https' ) )
-                    : sanitize_text_field( $data[ $key ] );
+                if ( 'redirect_type' === $key ) {
+                    $value = self::sanitize_redirect_type( $data[ $key ] );
+                } else {
+                    $value = in_array( $key, array( 'destination_url', 'geo_fallback_url', 'expired_url' ), true )
+                        ? esc_url_raw( $data[ $key ], array( 'http', 'https' ) )
+                        : sanitize_text_field( $data[ $key ] );
+                }
                 update_post_meta( $this->id, $meta_key, $value );
             }
         }
     }
 
-    public static function find_by_slug( $slug ) {
+    public static function find_by_slug( $slug, $any_status = false ) {
         $posts = get_posts( array(
             'post_type'      => 'katina_link',
             'name'           => sanitize_title( $slug ),
-            'post_status'    => 'publish',
+            'post_status'    => $any_status ? array( 'publish', 'draft', 'pending', 'private', 'future' ) : 'publish',
             'posts_per_page' => 1,
             'no_found_rows'  => true,
         ) );

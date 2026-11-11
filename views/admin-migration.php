@@ -3,33 +3,12 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-$migrators = array(
-    'thirstyaffiliates'  => 'KATINA_Migrator_ThirstyAffiliates',
-    'prettylinks'        => 'KATINA_Migrator_PrettyLinks',
-    'linkcentral'        => 'KATINA_Migrator_LinkCentral',
-    'easyaffiliatelinks' => 'KATINA_Migrator_EasyAffiliateLinks',
-);
+$migrators = KATINA_Migration_Ajax::SOURCES;
 
-$migration_result = null;
-$scan_result      = null;
-$cleanup_result   = null;
-$cleanup_source   = '';
+$cleanup_result = null;
+$cleanup_source = '';
 
-if ( isset( $_POST['katina_migrate_source'] ) && check_admin_referer( 'katina_run_migration' ) ) {
-    $source_key = sanitize_key( wp_unslash( $_POST['katina_migrate_source'] ) );
-    if ( isset( $migrators[ $source_key ] ) ) {
-        $class    = $migrators[ $source_key ];
-        $migrator = new $class();
-        $migrator->set_adopt_prefix( 'auto' );
-        $migration_result = $migrator->run();
-        $migration_result['source'] = $class::get_source_name();
-
-        if ( ! empty( $_POST['katina_scan_content'] ) ) {
-            $scanner = new KATINA_Content_Scanner( $migrator->get_id_map(), $class::get_source_name() );
-            $scan_result = $scanner->scan_and_replace();
-        }
-    }
-} elseif ( isset( $_POST['katina_cleanup_source'] ) && check_admin_referer( 'katina_cleanup_orphaned' ) ) {
+if ( isset( $_POST['katina_cleanup_source'] ) && check_admin_referer( 'katina_cleanup_orphaned' ) ) {
     $source_key = sanitize_key( wp_unslash( $_POST['katina_cleanup_source'] ) );
     if ( isset( $migrators[ $source_key ] ) ) {
         $class          = $migrators[ $source_key ];
@@ -54,56 +33,25 @@ foreach ( $migrators as $key => $class ) {
         'state' => $state,
     );
 }
+
+$retention_days = (int) get_option( 'katina_clicks_retention_days', KATINA_Privacy::DEFAULT_RETENTION_DAYS );
+$autostart      = isset( $_GET['katina_autostart'] ) ? sanitize_key( wp_unslash( $_GET['katina_autostart'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$autostart_scan = ! empty( $_GET['katina_scan'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+// A link alone only pre-selects the source; the nonce from the setup wizard is what allows the import to start.
+$autostart_run  = isset( $_GET['katina_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['katina_nonce'] ) ), 'katina_autostart_' . $autostart );
+
+wp_enqueue_script( 'katina-migration', KATINA_PLUGIN_URL . 'assets/js/migration.js', array( 'jquery' ), KATINA_VERSION, true );
+wp_localize_script( 'katina-migration', 'katinaMigration', array(
+    'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+    'nonce'     => wp_create_nonce( 'katina_migration' ),
+    'autostart' => isset( $states[ $autostart ] ) ? array( 'source' => $autostart, 'scan' => $autostart_scan, 'run' => (bool) $autostart_run ) : null,
+    'i18n'      => array(
+        'starting' => __( 'Starting...', 'katina-link-manager' ),
+        'confirm'  => __( 'Start importing now?', 'katina-link-manager' ),
+        'failed'   => __( 'The migration stopped because of a server error. Run it again to carry on where it left off.', 'katina-link-manager' ),
+    ),
+) );
 ?>
-
-<?php if ( $migration_result ) : ?>
-    <div class="notice notice-success">
-        <p><strong><?php
-            /* translators: %s: source plugin name (e.g. ThirstyAffiliates) */
-            printf( esc_html__( 'Migration from %s complete!', 'katina-link-manager' ), esc_html( $migration_result['source'] ) );
-        ?></strong></p>
-        <ul class="katina-result-list">
-            <li><?php
-                /* translators: %d: number of links imported */
-                printf( esc_html( _n( '%d link imported', '%d links imported', (int) $migration_result['links'], 'katina-link-manager' ) ), (int) $migration_result['links'] );
-            ?></li>
-            <li><?php
-                /* translators: %d: number of categories created */
-                printf( esc_html( _n( '%d category created', '%d categories created', (int) $migration_result['categories'], 'katina-link-manager' ) ), (int) $migration_result['categories'] );
-            ?></li>
-            <li><?php
-                /* translators: %d: number of click records imported */
-                printf( esc_html( _n( '%d click record imported', '%d click records imported', (int) $migration_result['clicks'], 'katina-link-manager' ) ), (int) $migration_result['clicks'] );
-            ?></li>
-            <?php if ( $migration_result['skipped'] ) : ?>
-                <li><?php
-                    /* translators: %d: number of links skipped */
-                    printf( esc_html( _n( '%d link skipped (already exists or no URL)', '%d links skipped (already exist or no URL)', (int) $migration_result['skipped'], 'katina-link-manager' ) ), (int) $migration_result['skipped'] );
-                ?></li>
-            <?php endif; ?>
-            <?php if ( $migration_result['errors'] ) : ?>
-                <li class="katina-result-error"><span class="dashicons dashicons-warning" aria-hidden="true"></span><?php
-                    /* translators: %d: number of errors */
-                    printf( esc_html( _n( '%d error occurred', '%d errors occurred', (int) $migration_result['errors'], 'katina-link-manager' ) ), (int) $migration_result['errors'] );
-                ?></li>
-            <?php endif; ?>
-        </ul>
-        <p><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=katina_link' ) ); ?>" class="button button-secondary"><?php esc_html_e( 'View imported links', 'katina-link-manager' ); ?> &rarr;</a></p>
-    </div>
-
-    <?php if ( $scan_result ) : ?>
-        <div class="notice notice-info">
-            <p><?php
-                printf(
-                    /* translators: 1: number of posts scanned, 2: number of posts updated */
-                    esc_html__( 'Content scan: %1$d posts scanned, %2$d posts updated with new link URLs.', 'katina-link-manager' ),
-                    (int) $scan_result['posts_scanned'],
-                    (int) $scan_result['replacements']
-                );
-            ?></p>
-        </div>
-    <?php endif; ?>
-<?php endif; ?>
 
 <?php if ( $cleanup_result ) : ?>
     <div class="notice notice-success">
@@ -161,8 +109,7 @@ foreach ( $migrators as $key => $class ) {
                     printf( esc_html( _n( '%d link found.', '%d links found.', (int) $info['count'], 'katina-link-manager' ) ), (int) $info['count'] );
                 ?></p>
 
-                <form method="post">
-                    <?php wp_nonce_field( 'katina_run_migration' ); ?>
+                <form method="post" class="katina-migrate-form">
                     <input type="hidden" name="katina_migrate_source" value="<?php echo esc_attr( $key ); ?>" />
                     <p>
                         <label>
@@ -170,6 +117,24 @@ foreach ( $migrators as $key => $class ) {
                             <?php esc_html_e( 'Also scan and update shortcodes/links in post content', 'katina-link-manager' ); ?>
                         </label>
                     </p>
+                    <?php if ( $retention_days > 0 ) : ?>
+                        <p class="katina-warn">
+                            <span class="dashicons dashicons-warning" aria-hidden="true"></span>
+                            <?php
+                            printf(
+                                /* translators: %d: click retention in days */
+                                esc_html__( 'Click records older than %d days are deleted every day, so older imported history would be removed again.', 'katina-link-manager' ),
+                                (int) $retention_days
+                            );
+                            ?>
+                        </p>
+                        <p>
+                            <label>
+                                <input type="checkbox" name="katina_keep_history" value="1" checked />
+                                <?php esc_html_e( 'Keep the imported click history (raises the retention period to cover it)', 'katina-link-manager' ); ?>
+                            </label>
+                        </p>
+                    <?php endif; ?>
                     <?php
                     submit_button(
                         sprintf(
@@ -181,7 +146,13 @@ foreach ( $migrators as $key => $class ) {
                         'submit',
                         false
                     );
+                    submit_button( __( 'Preview without importing', 'katina-link-manager' ), 'secondary', 'katina_dry_run', false );
                     ?>
+                    <div class="katina-migrate-progress" hidden>
+                        <div class="katina-progress-track"><div class="katina-progress-bar"></div></div>
+                        <p class="katina-migrate-status" role="status" aria-live="polite"></p>
+                    </div>
+                    <div class="katina-migrate-result"></div>
                 </form>
             <?php else : ?>
                 <p><?php
@@ -189,14 +160,39 @@ foreach ( $migrators as $key => $class ) {
                     printf( esc_html__( 'The %s plugin is not active, but its data is still in your database. You can either import it into Katina Link Manager or remove it entirely.', 'katina-link-manager' ), esc_html( $info['name'] ) );
                 ?></p>
 
-                <form method="post" class="katina-inline-form">
-                    <?php wp_nonce_field( 'katina_run_migration' ); ?>
+                <form method="post" class="katina-inline-form katina-migrate-form">
                     <input type="hidden" name="katina_migrate_source" value="<?php echo esc_attr( $key ); ?>" />
                     <label class="katina-inline-checkbox">
                         <input type="checkbox" name="katina_scan_content" value="1" checked />
                         <?php esc_html_e( 'Also scan and update shortcodes/links in post content', 'katina-link-manager' ); ?>
                     </label>
-                    <?php submit_button( __( 'Import data', 'katina-link-manager' ), 'secondary', 'submit', false ); ?>
+                    <?php if ( $retention_days > 0 ) : ?>
+                        <p class="katina-warn">
+                            <span class="dashicons dashicons-warning" aria-hidden="true"></span>
+                            <?php
+                            printf(
+                                /* translators: %d: click retention in days */
+                                esc_html__( 'Click records older than %d days are deleted every day, so older imported history would be removed again.', 'katina-link-manager' ),
+                                (int) $retention_days
+                            );
+                            ?>
+                        </p>
+                        <p>
+                            <label>
+                                <input type="checkbox" name="katina_keep_history" value="1" checked />
+                                <?php esc_html_e( 'Keep the imported click history (raises the retention period to cover it)', 'katina-link-manager' ); ?>
+                            </label>
+                        </p>
+                    <?php endif; ?>
+                    <?php
+                    submit_button( __( 'Import data', 'katina-link-manager' ), 'secondary', 'submit', false );
+                    submit_button( __( 'Preview without importing', 'katina-link-manager' ), 'secondary', 'katina_dry_run', false );
+                    ?>
+                    <div class="katina-migrate-progress" hidden>
+                        <div class="katina-progress-track"><div class="katina-progress-bar"></div></div>
+                        <p class="katina-migrate-status" role="status" aria-live="polite"></p>
+                    </div>
+                    <div class="katina-migrate-result"></div>
                 </form>
 
                 <?php /* translators: %s: source plugin name */ ?>

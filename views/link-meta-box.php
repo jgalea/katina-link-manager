@@ -14,11 +14,24 @@ $sub_id_param  = get_post_meta( $link->get_id(), '_katina_sub_id_param', true );
 $click_param   = get_post_meta( $link->get_id(), '_katina_click_id_param', true );
 $geo_countries = get_post_meta( $link->get_id(), '_katina_geo_countries', true );
 $geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', true );
+$expires_ts    = (int) get_post_meta( $link->get_id(), '_katina_expires_at', true );
+$expires_at    = $expires_ts ? wp_date( 'Y-m-d\TH:i', $expires_ts ) : '';
+$max_clicks    = (int) get_post_meta( $link->get_id(), '_katina_max_clicks', true );
+$expired_url   = get_post_meta( $link->get_id(), '_katina_expired_url', true );
 ?>
 <table class="form-table katina-meta-box">
     <tr>
         <th><label for="katina_destination_url"><?php esc_html_e( 'Destination URL', 'katina-link-manager' ); ?></label></th>
         <td><input type="url" id="katina_destination_url" name="katina_destination_url" value="<?php echo esc_url( $dest_url ); ?>" class="widefat" placeholder="https://" required /></td>
+    </tr>
+    <tr>
+        <th><label for="katina_slug"><?php esc_html_e( 'Slug', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="text" id="katina_slug" name="katina_slug" value="<?php echo esc_attr( $link->get_slug() ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Generated from the title', 'katina-link-manager' ); ?>" data-post-id="<?php echo esc_attr( $link->get_id() ); ?>" autocomplete="off" />
+            <button type="button" class="button" id="katina-generate-slug"><?php esc_html_e( 'Generate short slug', 'katina-link-manager' ); ?></button>
+            <p class="description"><?php esc_html_e( 'The last part of the cloaked URL, for example', 'katina-link-manager' ); ?> <code id="katina-slug-preview"><?php echo esc_html( $link->get_cloaked_url() ); ?></code></p>
+            <p class="description katina-slug-feedback" id="katina-slug-feedback" role="status" aria-live="polite"></p>
+        </td>
     </tr>
     <tr>
         <th><label><?php esc_html_e( 'Cloaked URL', 'katina-link-manager' ); ?></label></th>
@@ -43,6 +56,7 @@ $geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', tru
                 <option value="301" <?php selected( $redirect_type, '301' ); ?>>301 (Permanent)</option>
                 <option value="302" <?php selected( $redirect_type, '302' ); ?>>302 (Temporary)</option>
                 <option value="307" <?php selected( $redirect_type, '307' ); ?>>307 (Temporary Strict)</option>
+                <option value="308" <?php selected( $redirect_type, '308' ); ?>>308 (Permanent Strict)</option>
             </select>
         </td>
     </tr>
@@ -133,5 +147,26 @@ $geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', tru
     <tr>
         <th><label for="katina_geo_fallback_url"><?php esc_html_e( 'Fallback URL', 'katina-link-manager' ); ?></label></th>
         <td><input type="url" id="katina_geo_fallback_url" name="katina_geo_fallback_url" value="<?php echo esc_url( $geo_fallback ); ?>" class="widefat" placeholder="https://" /></td>
+    </tr>
+    <tr class="katina-field-group">
+        <th><label for="katina_expires_at"><?php esc_html_e( 'Expires On', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="datetime-local" id="katina_expires_at" name="katina_expires_at" value="<?php echo esc_attr( $expires_at ); ?>" />
+            <p class="description"><?php esc_html_e( 'Site time. After this, visitors go to the expiry URL below.', 'katina-link-manager' ); ?></p>
+        </td>
+    </tr>
+    <tr>
+        <th><label for="katina_max_clicks"><?php esc_html_e( 'Expires After Clicks', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="number" min="0" step="1" id="katina_max_clicks" name="katina_max_clicks" value="<?php echo $max_clicks ? esc_attr( $max_clicks ) : ''; ?>" class="small-text" />
+            <p class="description"><?php esc_html_e( 'Counts clicks from visitors, not bots. Leave blank for no limit.', 'katina-link-manager' ); ?></p>
+        </td>
+    </tr>
+    <tr>
+        <th><label for="katina_expired_url"><?php esc_html_e( 'Expiry URL', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="url" id="katina_expired_url" name="katina_expired_url" value="<?php echo esc_url( $expired_url ); ?>" class="widefat" placeholder="https://" />
+            <p class="description"><?php esc_html_e( 'Where visitors go once the link has expired. Leave blank to show a not-found page.', 'katina-link-manager' ); ?></p>
+        </td>
     </tr>
 </table>

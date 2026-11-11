@@ -13,33 +13,66 @@ class KATINA_Content_Scanner {
         $this->source = $source;
     }
 
-    public function scan_and_replace() {
+    // Scans published content in ID order. With a time budget it stops when the budget is spent and reports where to resume.
+    public function scan_and_replace( $after_id = 0, $time_budget = 0 ) {
         $results = array(
             'posts_scanned' => 0,
             'replacements'  => 0,
+            'last_id'       => (int) $after_id,
+            'done'          => true,
         );
+        $deadline = $time_budget > 0 ? microtime( true ) + $time_budget : 0;
 
         // Restrict to published content by default. Rewriting drafts/private
         // posts is opt-in to avoid regex misfires corrupting unpublished work.
         $include_all = apply_filters( 'katina_content_scanner_include_all_statuses', false );
 
-        $posts = get_posts( array(
-            'post_type'      => array( 'post', 'page' ),
-            'post_status'    => $include_all ? 'any' : 'publish',
-            'posts_per_page' => -1,
-            'no_found_rows'  => true,
-        ) );
+        $post_types = array_values( array_filter( get_post_types( array( 'public' => true ) ), function ( $type ) {
+            return 'attachment' !== $type && post_type_supports( $type, 'editor' );
+        } ) );
 
-        foreach ( $posts as $post ) {
-            $results['posts_scanned']++;
+        $after_filter = function ( $where ) use ( &$after_id ) {
+            global $wpdb;
+            return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $after_id );
+        };
 
-            $new_content = $this->replace_in_content( $post->post_content, $results );
+        while ( true ) {
+            add_filter( 'posts_where', $after_filter );
+            $posts = get_posts( array(
+                'post_type'        => $post_types,
+                'post_status'      => $include_all ? 'any' : 'publish',
+                'posts_per_page'   => 50,
+                'orderby'          => 'ID',
+                'order'            => 'ASC',
+                'no_found_rows'    => true,
+                'suppress_filters' => false,
+            ) );
+            remove_filter( 'posts_where', $after_filter );
 
-            if ( $new_content !== $post->post_content ) {
-                wp_update_post( array(
-                    'ID'           => $post->ID,
-                    'post_content' => $new_content,
-                ) );
+            if ( empty( $posts ) ) {
+                break;
+            }
+
+            foreach ( $posts as $post ) {
+                $results['posts_scanned']++;
+
+                $new_content = $this->replace_in_content( $post->post_content, $results );
+
+                if ( $new_content !== $post->post_content ) {
+                    wp_update_post( array(
+                        'ID'           => $post->ID,
+                        'post_content' => $new_content,
+                    ) );
+                }
+
+                $results['last_id'] = $post->ID;
+                $after_id           = $post->ID;
+            }
+
+            wp_cache_flush_runtime();
+            if ( $deadline && microtime( true ) > $deadline ) {
+                $results['done'] = false;
+                break;
             }
         }
 

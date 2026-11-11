@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_CSV {
 
-    const IMPORT_COLUMNS = array( 'title', 'slug', 'destination_url', 'redirect_type', 'nofollow', 'sponsored', 'new_window', 'pass_query_str', 'css_classes', 'rel_tags', 'categories', 'tags', 'status' );
+    const IMPORT_COLUMNS = array( 'title', 'slug', 'destination_url', 'redirect_type', 'nofollow', 'sponsored', 'new_window', 'pass_query_str', 'css_classes', 'rel_tags', 'categories', 'tags', 'status', 'sub_id_param', 'click_id_param', 'geo_countries', 'geo_fallback_url' );
 
     public static function init() {
         add_action( 'admin_post_katina_export_csv', array( __CLASS__, 'export' ) );
@@ -18,14 +18,21 @@ class KATINA_CSV {
         $skipped    = isset( $_GET['katina_skipped'] ) ? (int) $_GET['katina_skipped'] : 0;
         $missing    = isset( $_GET['katina_missing'] ) ? (int) $_GET['katina_missing'] : 0;
         $errors     = isset( $_GET['katina_errors'] ) ? (int) $_GET['katina_errors'] : 0;
+        $updated    = isset( $_GET['katina_updated'] ) ? (int) $_GET['katina_updated'] : 0;
         $sample_url = wp_nonce_url( admin_url( 'admin-post.php?action=katina_sample_csv' ), 'katina_sample_csv' );
         ?>
-        <?php if ( $imported || $skipped || $missing || $errors ) : ?>
+        <?php if ( $imported || $updated || $skipped || $missing || $errors ) : ?>
             <div class="notice notice-success"><p>
                 <?php
                 /* translators: %d: number of links imported */
                 printf( esc_html( _n( '%d link imported.', '%d links imported.', (int) $imported, 'katina-link-manager' ) ), (int) $imported );
                 ?>
+                <?php if ( $updated ) : ?>
+                    <?php
+                    /* translators: %d: number of existing links updated */
+                    printf( esc_html( _n( ' %d existing link updated.', ' %d existing links updated.', (int) $updated, 'katina-link-manager' ) ), (int) $updated );
+                    ?>
+                <?php endif; ?>
                 <?php if ( $skipped ) : ?>
                     <?php
                     /* translators: %d: number of rows skipped (slug existed) */
@@ -62,7 +69,7 @@ class KATINA_CSV {
             <?php
             printf(
                 /* translators: %s: comma-separated column list */
-                esc_html__( 'Upload a CSV with these columns: %s. Required: title, destination_url. Existing slugs are skipped.', 'katina-link-manager' ),
+                esc_html__( 'Upload a CSV with these columns: %s. Required: title, destination_url. Rows whose slug already exists are skipped, or update that link if you tick the box below.', 'katina-link-manager' ),
                 '<code>' . esc_html( implode( ', ', self::IMPORT_COLUMNS ) ) . '</code>'
             );
             ?>
@@ -72,6 +79,12 @@ class KATINA_CSV {
             <?php wp_nonce_field( 'katina_import_csv' ); ?>
             <input type="hidden" name="action" value="katina_import_csv" />
             <input type="file" name="katina_csv_file" accept=".csv" required />
+            <p>
+                <label>
+                    <input type="checkbox" name="katina_update_existing" value="1" />
+                    <?php esc_html_e( 'Update links that already exist (matched by slug)', 'katina-link-manager' ); ?>
+                </label>
+            </p>
             <?php submit_button( __( 'Import CSV', 'katina-link-manager' ) ); ?>
         </form>
         <?php
@@ -79,7 +92,7 @@ class KATINA_CSV {
 
     public static function sample() {
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'Unauthorized' );
+            wp_die( esc_html__( 'Unauthorized', 'katina-link-manager' ) );
         }
         check_admin_referer( 'katina_sample_csv' );
 
@@ -92,7 +105,7 @@ class KATINA_CSV {
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
         fwrite( $output, "\xEF\xBB\xBF" );
         fputcsv( $output, self::IMPORT_COLUMNS );
-        self::fputcsv_safe( $output, array( 'Example Affiliate', 'example-affiliate', 'https://partner.example.com/?ref=me', '307', 'yes', 'yes', 'yes', 'no', '', '', 'Finance|Investing', 'broker', 'publish' ) );
+        self::fputcsv_safe( $output, array( 'Example Affiliate', 'example-affiliate', 'https://partner.example.com/?ref=me', '307', 'yes', 'yes', 'yes', 'no', '', '', 'Finance|Investing', 'broker', 'publish', '', '', '', '' ) );
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
         fclose( $output );
         exit;
@@ -100,7 +113,7 @@ class KATINA_CSV {
 
     public static function export() {
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'Unauthorized' );
+            wp_die( esc_html__( 'Unauthorized', 'katina-link-manager' ) );
         }
         check_admin_referer( 'katina_export_csv' );
 
@@ -141,6 +154,10 @@ class KATINA_CSV {
                 implode( '|', $categories ),
                 implode( '|', $tags ),
                 $post->post_status,
+                get_post_meta( $post->ID, '_katina_sub_id_param', true ),
+                get_post_meta( $post->ID, '_katina_click_id_param', true ),
+                get_post_meta( $post->ID, '_katina_geo_countries', true ),
+                get_post_meta( $post->ID, '_katina_geo_fallback_url', true ),
             ) );
         }
 
@@ -156,7 +173,7 @@ class KATINA_CSV {
      * Defang spreadsheet formula injection by prefixing dangerous-leading cells
      * with a single quote so Excel/Numbers/LibreOffice treat the cell as text.
      */
-    private static function defang_csv_cell( $value ) {
+    public static function defang_csv_cell( $value ) {
         $str = (string) $value;
         if ( $str !== '' && in_array( $str[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
             return "'" . $str;
@@ -170,24 +187,25 @@ class KATINA_CSV {
 
     public static function import() {
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'Unauthorized' );
+            wp_die( esc_html__( 'Unauthorized', 'katina-link-manager' ) );
         }
         check_admin_referer( 'katina_import_csv' );
 
         if ( ! isset( $_FILES['katina_csv_file'] ) || $_FILES['katina_csv_file']['error'] !== UPLOAD_ERR_OK ) {
-            wp_die( 'File upload failed.' );
+            wp_die( esc_html__( 'File upload failed.', 'katina-link-manager' ) );
         }
 
         $tmp_name = sanitize_text_field( wp_unslash( $_FILES['katina_csv_file']['tmp_name'] ) );
 
         // Defense against tmp_name substitution attack
         if ( ! is_uploaded_file( $tmp_name ) ) {
-            wp_die( 'Invalid upload.' );
+            wp_die( esc_html__( 'Invalid upload.', 'katina-link-manager' ) );
         }
 
         // Size cap
         if ( filesize( $tmp_name ) > self::MAX_IMPORT_BYTES ) {
-            wp_die( esc_html( sprintf( 'File too large. Maximum size is %d MB.', self::MAX_IMPORT_BYTES / 1048576 ) ) );
+            /* translators: %d: maximum file size in MB */
+            wp_die( esc_html( sprintf( __( 'File too large. Maximum size is %d MB.', 'katina-link-manager' ), self::MAX_IMPORT_BYTES / 1048576 ) ) );
         }
 
         // MIME validation — wp_check_filetype_and_ext sniffs extension + mime
@@ -196,26 +214,34 @@ class KATINA_CSV {
         $allowed   = array( 'text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel' );
         $mime_ok   = $filetype['type'] && ( in_array( $filetype['type'], $allowed, true ) || ( $filetype['ext'] === 'csv' ) );
         if ( ! $mime_ok ) {
-            wp_die( 'Only CSV files are allowed.' );
+            wp_die( esc_html__( 'Only CSV files are allowed.', 'katina-link-manager' ) );
         }
 
         // Reading uploaded CSV row-by-row; WP_Filesystem has no streaming/iteration API.
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
         $file = fopen( $tmp_name, 'r' );
         if ( ! $file ) {
-            wp_die( 'Could not read file.' );
+            wp_die( esc_html__( 'Could not read file.', 'katina-link-manager' ) );
         }
 
         $header = fgetcsv( $file );
+        if ( ! is_array( $header ) || array( null ) === $header ) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+            fclose( $file );
+            wp_die( esc_html__( 'The file is empty or has no header row.', 'katina-link-manager' ) );
+        }
         // Strip UTF-8 BOM from the first cell of the header row if present
         if ( is_array( $header ) && isset( $header[0] ) ) {
             $header[0] = preg_replace( '/^\xEF\xBB\xBF/', '', $header[0] );
         }
-        $count   = 0;
-        $skipped = 0;
-        $missing = 0;
-        $errors  = 0;
-        $col_map = array_flip( $header );
+        $count    = 0;
+        $updated  = 0;
+        $skipped  = 0;
+        $missing  = 0;
+        $errors   = 0;
+        $col_map  = array_flip( $header );
+        $update   = ! empty( $_POST['katina_update_existing'] );
+        $statuses = array( 'publish', 'draft', 'pending', 'private' );
 
         $row_num = 0;
         while ( ( $row = fgetcsv( $file ) ) !== false ) {
@@ -224,44 +250,55 @@ class KATINA_CSV {
                 $errors++;
                 break;
             }
-            $title = isset( $col_map['title'] ) ? $row[ $col_map['title'] ] : '';
-            $slug  = isset( $col_map['slug'] ) ? $row[ $col_map['slug'] ] : sanitize_title( $title );
-            $url   = isset( $col_map['destination_url'] ) ? $row[ $col_map['destination_url'] ] : '';
+            $cell = function ( $name ) use ( $col_map, $row ) {
+                return isset( $col_map[ $name ], $row[ $col_map[ $name ] ] ) ? $row[ $col_map[ $name ] ] : null;
+            };
+
+            $title = (string) $cell( 'title' );
+            $slug  = null !== $cell( 'slug' ) && '' !== $cell( 'slug' ) ? $cell( 'slug' ) : sanitize_title( $title );
+            $url   = (string) $cell( 'destination_url' );
 
             if ( ! $title || ! $url ) {
                 $missing++;
                 continue;
             }
 
-            $existing = KATINA_Link::find_by_slug( $slug );
-            if ( $existing ) {
+            $status   = in_array( $cell( 'status' ), $statuses, true ) ? $cell( 'status' ) : 'publish';
+            $existing = KATINA_Link::find_by_slug( $slug, true );
+            if ( $existing && ! $update ) {
                 $skipped++;
                 continue;
             }
 
-            $post_id = wp_insert_post( array(
-                'post_type'   => 'katina_link',
-                'post_title'  => sanitize_text_field( $title ),
-                'post_name'   => sanitize_title( $slug ),
-                'post_status' => isset( $col_map['status'] ) ? sanitize_text_field( $row[ $col_map['status'] ] ) : 'publish',
-            ) );
+            if ( $existing ) {
+                $post_id = $existing->get_id();
+                $args    = array( 'ID' => $post_id, 'post_title' => sanitize_text_field( $title ) );
+                if ( null !== $cell( 'status' ) ) {
+                    $args['post_status'] = $status;
+                }
+                wp_update_post( $args );
+            } else {
+                $post_id = wp_insert_post( array(
+                    'post_type'   => 'katina_link',
+                    'post_title'  => sanitize_text_field( $title ),
+                    'post_name'   => sanitize_title( $slug ),
+                    'post_status' => $status,
+                ) );
+            }
 
-            if ( is_wp_error( $post_id ) ) {
+            if ( is_wp_error( $post_id ) || ! $post_id ) {
                 $errors++;
                 continue;
             }
 
+            $meta = array( 'destination_url' => esc_url_raw( $url ) );
+            foreach ( array( 'redirect_type', 'nofollow', 'sponsored', 'new_window', 'pass_query_str', 'css_classes', 'rel_tags', 'sub_id_param', 'click_id_param', 'geo_countries', 'geo_fallback_url' ) as $field ) {
+                if ( null !== $cell( $field ) ) {
+                    $meta[ $field ] = $cell( $field );
+                }
+            }
             $link = new KATINA_Link( $post_id );
-            $link->save_meta( array(
-                'destination_url' => esc_url_raw( $url ),
-                'redirect_type'   => isset( $col_map['redirect_type'] ) ? sanitize_text_field( $row[ $col_map['redirect_type'] ] ) : 'default',
-                'nofollow'        => isset( $col_map['nofollow'] ) ? sanitize_text_field( $row[ $col_map['nofollow'] ] ) : 'default',
-                'sponsored'       => isset( $col_map['sponsored'] ) ? sanitize_text_field( $row[ $col_map['sponsored'] ] ) : 'default',
-                'new_window'      => isset( $col_map['new_window'] ) ? sanitize_text_field( $row[ $col_map['new_window'] ] ) : 'default',
-                'pass_query_str'  => isset( $col_map['pass_query_str'] ) ? sanitize_text_field( $row[ $col_map['pass_query_str'] ] ) : 'default',
-                'css_classes'     => isset( $col_map['css_classes'] ) ? sanitize_text_field( $row[ $col_map['css_classes'] ] ) : '',
-                'rel_tags'        => isset( $col_map['rel_tags'] ) ? sanitize_text_field( $row[ $col_map['rel_tags'] ] ) : '',
-            ) );
+            $link->save_meta( $meta );
 
             if ( isset( $col_map['categories'] ) && ! empty( $row[ $col_map['categories'] ] ) ) {
                 $cats = array_map( 'trim', explode( '|', $row[ $col_map['categories'] ] ) );
@@ -287,7 +324,11 @@ class KATINA_CSV {
                 wp_set_post_terms( $post_id, $tags, 'katina_tag' );
             }
 
-            $count++;
+            if ( $existing ) {
+                $updated++;
+            } else {
+                $count++;
+            }
         }
 
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
@@ -299,6 +340,7 @@ class KATINA_CSV {
                 'page'        => KATINA_Tools::PAGE_SLUG,
                 'tab'         => 'import-export',
                 'katina_imported' => $count,
+                'katina_updated'  => $updated,
                 'katina_skipped'  => $skipped,
                 'katina_missing'  => $missing,
                 'katina_errors'   => $errors,

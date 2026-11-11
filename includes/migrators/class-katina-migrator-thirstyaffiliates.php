@@ -52,30 +52,43 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
     }
 
     public function run() {
+        global $wpdb;
         self::register_source_taxonomy( 'thirstylink-category', 'thirstylink' );
         $this->globals = $this->read_globals();
-        $had_links     = $this->katina_has_links();
 
-        $ids = get_posts( array(
-            'post_type'        => 'thirstylink',
-            'post_status'      => array( 'publish', 'draft', 'private' ),
-            'posts_per_page'   => -1,
-            'fields'           => 'ids',
-            'orderby'          => 'ID',
-            'order'            => 'ASC',
-            'no_found_rows'    => true,
-        ) );
+        if ( 0 === $this->cursor ) {
+            $this->results['prefix'] = $this->handle_prefix( $this->katina_has_links() );
+        }
 
-        $this->results['prefix'] = $this->handle_prefix( $had_links );
+        $total = self::get_source_count();
+        $done  = 0;
+        while ( true ) {
+            $ids = $wpdb->get_col( $wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'thirstylink' AND post_status IN ('publish', 'draft', 'private') AND ID > %d ORDER BY ID ASC LIMIT 100",
+                $this->cursor
+            ) );
 
-        $total = count( $ids );
-        foreach ( $ids as $index => $post_id ) {
-            $this->migrate_one( (int) $post_id );
-            if ( $this->progress ) {
-                call_user_func( $this->progress, $index + 1, $total, $this->results );
+            if ( empty( $ids ) ) {
+                break;
             }
-            if ( 0 === ( $index + 1 ) % 50 ) {
-                wp_cache_flush_runtime();
+
+            foreach ( $ids as $post_id ) {
+                if ( ! $this->migrate_one( (int) $post_id ) ) {
+                    $this->complete = false;
+                    return $this->results;
+                }
+                $this->cursor = (int) $post_id;
+                $done++;
+                if ( $this->progress ) {
+                    call_user_func( $this->progress, $done, $total, $this->results );
+                }
+                if ( 0 === $done % 50 ) {
+                    wp_cache_flush_runtime();
+                }
+                if ( $this->out_of_time() ) {
+                    $this->complete = false;
+                    return $this->results;
+                }
             }
         }
 
@@ -144,7 +157,7 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
     private function migrate_one( $post_id ) {
         $post = get_post( $post_id );
         if ( ! $post ) {
-            return;
+            return true;
         }
 
         $meta = get_post_meta( $post_id );
@@ -178,13 +191,13 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
         ) );
 
         if ( ! $link_id ) {
-            return;
+            return true;
         }
 
         if ( ! $this->dry_run ) {
             $this->migrate_categories( $post_id, $link_id );
         }
-        $this->migrate_clicks( $post_id, $link_id );
+        return $this->migrate_clicks( $post_id, $link_id );
     }
 
     private function migrate_categories( $old_post_id, $link_id ) {
@@ -222,7 +235,7 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
         $meta_table   = $wpdb->prefix . 'ta_link_clicks_meta';
 
         if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $clicks_table ) ) !== $clicks_table ) {
-            return;
+            return true;
         }
 
         $has_meta = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $meta_table ) ) === $meta_table;
@@ -248,7 +261,7 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
             }
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $this->results['clicks'] += (int) $wpdb->get_var( $wpdb->prepare( $sql, $args ) );
-            return;
+            return true;
         }
 
         while ( true ) {
@@ -303,7 +316,7 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
             $inserted = KATINA_Clicks_DB::bulk_insert( $rows );
             if ( false === $inserted ) {
                 $this->results['errors']++;
-                break;
+                return true;
             }
 
             $this->results['clicks'] += count( $rows );
@@ -316,17 +329,11 @@ class KATINA_Migrator_ThirstyAffiliates extends KATINA_Migrator {
             if ( self::CLICK_BATCH > $count ) {
                 break;
             }
+            if ( $this->out_of_time() ) {
+                return false;
+            }
         }
-    }
 
-    private function clean_referrer( $referrer ) {
-        $referrer = esc_url_raw( $referrer );
-        if ( '' === $referrer ) {
-            return '';
-        }
-        $parts = wp_parse_url( $referrer );
-        $clean = ( isset( $parts['scheme'], $parts['host'] ) ? $parts['scheme'] . '://' . $parts['host'] : '' )
-               . ( isset( $parts['path'] ) ? $parts['path'] : '' );
-        return substr( $clean, 0, 2048 );
+        return true;
     }
 }

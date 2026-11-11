@@ -5,27 +5,36 @@ global $wpdb;
 $table = KATINA_Clicks_DB::get_table_name();
 
 $total_links  = wp_count_posts( 'katina_link' )->publish;
-$total_clicks = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_bot = 0" );
-$clicks_30d   = (int) $wpdb->get_var( $wpdb->prepare(
-    "SELECT COUNT(*) FROM {$table} WHERE is_bot = 0 AND clicked_at >= %s",
-    gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) )
-) );
-$clicks_7d    = (int) $wpdb->get_var( $wpdb->prepare(
-    "SELECT COUNT(*) FROM {$table} WHERE is_bot = 0 AND clicked_at >= %s",
-    gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) )
-) );
-
-$since = gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
-$top_links = $wpdb->get_results( $wpdb->prepare(
-    "SELECT c.link_id, p.post_title, COUNT(*) as clicks
-     FROM {$table} c
-     JOIN {$wpdb->posts} p ON c.link_id = p.ID
-     WHERE c.is_bot = 0 AND c.clicked_at >= %s
-     GROUP BY c.link_id
-     ORDER BY clicks DESC
-     LIMIT 10",
-    $since
-) );
+$stats = get_transient( 'katina_dashboard_stats' );
+if ( ! is_array( $stats ) ) {
+    $since = gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
+    $stats = array(
+        'total_clicks' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_bot = 0" ),
+        'clicks_30d'   => (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} WHERE is_bot = 0 AND clicked_at >= %s",
+            $since
+        ) ),
+        'clicks_7d'    => (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} WHERE is_bot = 0 AND clicked_at >= %s",
+            gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) )
+        ) ),
+        'top_links'    => $wpdb->get_results( $wpdb->prepare(
+            "SELECT c.link_id, p.post_title, COUNT(*) as clicks
+             FROM {$table} c
+             JOIN {$wpdb->posts} p ON c.link_id = p.ID
+             WHERE c.is_bot = 0 AND c.clicked_at >= %s
+             GROUP BY c.link_id
+             ORDER BY clicks DESC
+             LIMIT 10",
+            $since
+        ) ),
+    );
+    set_transient( 'katina_dashboard_stats', $stats, 5 * MINUTE_IN_SECONDS );
+}
+$total_clicks = $stats['total_clicks'];
+$clicks_30d   = $stats['clicks_30d'];
+$clicks_7d    = $stats['clicks_7d'];
+$top_links    = $stats['top_links'];
 ?>
 <div class="wrap">
     <h1><?php esc_html_e( 'Katina Link Manager Dashboard', 'katina-link-manager' ); ?></h1>

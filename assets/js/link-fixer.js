@@ -19,7 +19,6 @@
 
         var formData = new FormData();
         formData.append('action', 'katina_link_fixer');
-        formData.append('nonce', katinaLinkFixer.nonce);
         urls.forEach(function(url) {
             formData.append('urls[]', url);
         });

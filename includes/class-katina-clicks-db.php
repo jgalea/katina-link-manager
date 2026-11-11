@@ -31,7 +31,8 @@ class KATINA_Clicks_DB {
             KEY idx_clicked_at (clicked_at),
             KEY idx_link_date (link_id, clicked_at),
             KEY idx_visitor (visitor_hash, clicked_at),
-            KEY idx_click_id (click_id)
+            KEY idx_click_id (click_id),
+            KEY idx_bot_date (is_bot, clicked_at)
         ) {$charset};";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -139,6 +140,24 @@ class KATINA_Clicks_DB {
             "SELECT COUNT(*) FROM {$table} WHERE link_id = %d AND is_bot = 0",
             $link_id
         ) );
+    }
+
+    public static function get_total_clicks_for( array $link_ids ) {
+        global $wpdb;
+        $link_ids = array_filter( array_map( 'absint', $link_ids ) );
+        if ( ! $link_ids ) {
+            return array();
+        }
+        $table        = self::get_table_name();
+        $placeholders = implode( ',', array_fill( 0, count( $link_ids ), '%d' ) );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+        $rows = $wpdb->get_results( $wpdb->prepare( "SELECT link_id, COUNT(*) AS total FROM {$table} WHERE is_bot = 0 AND link_id IN ({$placeholders}) GROUP BY link_id", $link_ids ) );
+        $map  = array();
+        foreach ( $rows as $row ) {
+            $map[ (int) $row->link_id ] = (int) $row->total;
+        }
+        return $map;
     }
 
     /**
@@ -358,14 +377,21 @@ class KATINA_Clicks_DB {
         ) );
     }
 
+    // Deleted in slices so a large table isn't locked for one long DELETE.
     public static function cleanup_old_data( $days = 365 ) {
         global $wpdb;
-        $table  = self::get_table_name();
-        $before = gmdate( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+        $table   = self::get_table_name();
+        $before  = gmdate( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+        $deleted = 0;
 
-        return $wpdb->query( $wpdb->prepare(
-            "DELETE FROM {$table} WHERE clicked_at < %s",
-            $before
-        ) );
+        do {
+            $batch = (int) $wpdb->query( $wpdb->prepare(
+                "DELETE FROM {$table} WHERE clicked_at < %s LIMIT 5000",
+                $before
+            ) );
+            $deleted += $batch;
+        } while ( 5000 === $batch );
+
+        return $deleted;
     }
 }
