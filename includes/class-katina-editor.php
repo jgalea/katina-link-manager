@@ -74,15 +74,19 @@ class KATINA_Editor {
 
         $posts   = get_posts( $args );
         $results = array();
+        $can_see = current_user_can( 'edit_katina_links' );
 
         foreach ( $posts as $post ) {
             $link      = new KATINA_Link( $post->ID );
-            $results[] = array(
+            $row       = array(
                 'id'    => $post->ID,
                 'title' => $post->post_title,
                 'url'   => $link->get_cloaked_url(),
-                'dest'  => $link->get_destination_url(),
             );
+            if ( $can_see ) {
+                $row['dest'] = $link->get_destination_url();
+            }
+            $results[] = $row;
         }
 
         wp_send_json_success( $results );
