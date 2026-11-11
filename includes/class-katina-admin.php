@@ -10,6 +10,8 @@ class KATINA_Admin {
     public static function init() {
         add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_boxes' ) );
         add_action( 'save_post_katina_link', array( __CLASS__, 'save_link_meta' ), 10, 2 );
+        add_filter( 'wp_insert_post_data', array( __CLASS__, 'apply_custom_slug' ), 10, 2 );
+        add_action( 'wp_ajax_katina_check_slug', array( __CLASS__, 'ajax_check_slug' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
         add_filter( 'manage_katina_link_posts_columns', array( __CLASS__, 'custom_columns' ) );
         add_filter( 'manage_katina_link_posts_columns', array( __CLASS__, 'strip_foreign_columns' ), 100 );
@@ -176,6 +178,71 @@ class KATINA_Admin {
         <?php
     }
 
+    public static function apply_custom_slug( $data, $postarr ) {
+        if ( 'katina_link' !== $data['post_type'] || ! isset( $_POST['katina_slug'], $_POST['katina_link_nonce'] ) ) {
+            return $data;
+        }
+        if ( ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['katina_link_nonce'] ) ), 'katina_save_link_meta' ) ) {
+            return $data;
+        }
+        if ( ! current_user_can( 'edit_katina_links' ) ) {
+            return $data;
+        }
+
+        $slug = sanitize_title( wp_unslash( $_POST['katina_slug'] ) );
+        if ( '' !== $slug ) {
+            $data['post_name'] = $slug;
+        }
+        return $data;
+    }
+
+    // Messages about a slug that another link or a page already uses, or a URL prefix that a page already owns.
+    public static function slug_conflicts( $slug, $exclude_id = 0 ) {
+        global $wpdb;
+        $messages = array();
+        $slug     = sanitize_title( $slug );
+        $prefix   = trim( (string) get_option( 'katina_link_prefix', 'go' ), '/' );
+
+        if ( '' !== $slug ) {
+            $other_link = $wpdb->get_var( $wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'katina_link' AND post_name = %s AND ID <> %d AND post_status NOT IN ('trash', 'auto-draft') LIMIT 1",
+                $slug,
+                (int) $exclude_id
+            ) );
+            if ( $other_link ) {
+                $messages[] = __( 'Another link already uses this slug. A number will be added to keep it unique.', 'katina-link-manager' );
+            }
+
+            $page = $wpdb->get_var( $wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type IN ('page', 'post') AND post_status = 'publish' LIMIT 1",
+                $slug
+            ) );
+            if ( $page ) {
+                $messages[] = __( 'A page or post on this site already uses this slug. The link works under the URL prefix, but pick a different slug if you also want it at the site root.', 'katina-link-manager' );
+            }
+        }
+
+        if ( '' !== $prefix && get_page_by_path( $prefix ) ) {
+            /* translators: %s: URL prefix */
+            $messages[] = sprintf( __( 'A page exists at /%s/. Links under that prefix take priority over its child pages with the same slug.', 'katina-link-manager' ), $prefix );
+        }
+
+        return $messages;
+    }
+
+    public static function ajax_check_slug() {
+        check_ajax_referer( 'katina_check_slug', 'nonce' );
+        if ( ! current_user_can( 'edit_katina_links' ) ) {
+            wp_send_json_error( null, 403 );
+        }
+
+        $slug = isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( $_POST['slug'] ) ) : '';
+        wp_send_json_success( array(
+            'slug'     => $slug,
+            'messages' => self::slug_conflicts( $slug, isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0 ),
+        ) );
+    }
+
     public static function save_link_meta( $post_id, $post ) {
         if ( ! isset( $_POST['katina_link_nonce'] ) || ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['katina_link_nonce'] ) ), 'katina_save_link_meta' ) ) {
             return;
@@ -269,7 +336,7 @@ class KATINA_Admin {
                 break;
             case 'katina_cloaked_url':
                 $cloaked = $link->get_cloaked_url();
-                echo '<code>' . esc_html( str_replace( home_url(), '', $cloaked ) ) . '</code>';
+                echo '<code data-url="' . esc_url( $cloaked ) . '">' . esc_html( str_replace( home_url(), '', $cloaked ) ) . '</code>';
                 break;
             case 'katina_clicks':
                 if ( null === self::$click_counts ) {
@@ -326,5 +393,14 @@ class KATINA_Admin {
 
         wp_enqueue_style( 'katina-admin', KATINA_PLUGIN_URL . 'assets/css/admin.css', array(), KATINA_VERSION );
         wp_enqueue_script( 'katina-admin', KATINA_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery' ), KATINA_VERSION, true );
+        wp_localize_script( 'katina-admin', 'katinaAdmin', array(
+            'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+            'slugNonce' => wp_create_nonce( 'katina_check_slug' ),
+            'homeUrl'   => home_url( '/' ),
+            'prefix'    => trim( (string) get_option( 'katina_link_prefix', 'go' ), '/' ),
+            'i18n'      => array(
+                'copied' => __( 'Copied!', 'katina-link-manager' ),
+            ),
+        ) );
     }
 }

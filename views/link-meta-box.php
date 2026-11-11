@@ -21,6 +21,15 @@ $geo_fallback  = get_post_meta( $link->get_id(), '_katina_geo_fallback_url', tru
         <td><input type="url" id="katina_destination_url" name="katina_destination_url" value="<?php echo esc_url( $dest_url ); ?>" class="widefat" placeholder="https://" required /></td>
     </tr>
     <tr>
+        <th><label for="katina_slug"><?php esc_html_e( 'Slug', 'katina-link-manager' ); ?></label></th>
+        <td>
+            <input type="text" id="katina_slug" name="katina_slug" value="<?php echo esc_attr( $link->get_slug() ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Generated from the title', 'katina-link-manager' ); ?>" data-post-id="<?php echo esc_attr( $link->get_id() ); ?>" autocomplete="off" />
+            <button type="button" class="button" id="katina-generate-slug"><?php esc_html_e( 'Generate short slug', 'katina-link-manager' ); ?></button>
+            <p class="description"><?php esc_html_e( 'The last part of the cloaked URL, for example', 'katina-link-manager' ); ?> <code id="katina-slug-preview"><?php echo esc_html( $link->get_cloaked_url() ); ?></code></p>
+            <p class="description katina-slug-feedback" id="katina-slug-feedback" role="status" aria-live="polite"></p>
+        </td>
+    </tr>
+    <tr>
         <th><label><?php esc_html_e( 'Cloaked URL', 'katina-link-manager' ); ?></label></th>
         <td>
             <span class="katina-cloaked-url-wrap">
