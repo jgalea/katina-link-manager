@@ -184,14 +184,18 @@ class KATINA_Link {
             (string) $this->get_destination_url()
         );
         if ( $this->passes_query_string() && $request_query_string ) {
-            // Use add_query_arg so query merging is safe instead of naive concat.
             parse_str( $request_query_string, $passed );
             unset( $passed[ self::PAGE_PARAM ] );
-            // Parameters the destination already sets (an affiliate tag, say) stay as the site owner wrote them.
-            parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $existing );
-            $passed = array_diff_key( $passed, $existing );
-            if ( ! empty( $passed ) ) {
-                $url = add_query_arg( urlencode_deep( $passed ), $url );
+            $passed = array_filter( $passed, function ( $key ) {
+                return (bool) preg_match( '/^[A-Za-z0-9_.\-]+(\[\])?$/', (string) $key );
+            }, ARRAY_FILTER_USE_KEY );
+            $parts = explode( '#', $url, 2 );
+            $base  = explode( '?', $parts[0], 2 );
+            parse_str( $base[1] ?? '', $existing );
+            // Parameters the destination already sets (an affiliate tag, a redirector's url) stay as the site owner wrote them.
+            $merged = $existing + $passed;
+            if ( count( $merged ) > count( $existing ) ) {
+                $url = $base[0] . '?' . http_build_query( $merged, '', '&', PHP_QUERY_RFC3986 ) . ( isset( $parts[1] ) ? '#' . $parts[1] : '' );
             }
         }
         return $url;
