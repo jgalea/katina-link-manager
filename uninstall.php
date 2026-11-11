@@ -5,6 +5,16 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 global $wpdb;
 
+wp_clear_scheduled_hook( 'katina_health_check_cron' );
+wp_clear_scheduled_hook( 'katina_health_recheck_drain' );
+wp_clear_scheduled_hook( 'katina_clicks_retention_cron' );
+wp_clear_scheduled_hook( 'katina_health_digest_cron' );
+
+// Links and click history are only removed when the site owner asked for it.
+if ( 'yes' !== get_option( 'katina_remove_data_on_uninstall', 'no' ) ) {
+    return;
+}
+
 // Delete all katina_link posts and their meta
 $posts = $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'katina_link'" );
 if ( $posts ) {
@@ -22,16 +32,13 @@ if ( $terms ) {
     }
 }
 
-// Unschedule health check cron
-wp_clear_scheduled_hook( 'katina_health_check_cron' );
-wp_clear_scheduled_hook( 'katina_clicks_retention_cron' );
-
 // Drop plugin tables
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}katina_clicks" );
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}katina_link_index" );
 
 // Delete options
-$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'katina\_%'" );
+$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'katina\_%' OR option_name LIKE '\_transient\_katina\_%' OR option_name LIKE '\_transient\_timeout\_katina\_%'" );
+$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'katina_setup_notice_dismissed' ) );
 
 // Flush rewrite rules
 flush_rewrite_rules();

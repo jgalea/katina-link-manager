@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class KATINA_Upgrader {
 
-    const DB_VERSION = '1.6';
+    const DB_VERSION = '1.7';
 
     public static function init() {
         add_action( 'init', array( __CLASS__, 'maybe_upgrade' ), -2 );
@@ -46,6 +46,11 @@ class KATINA_Upgrader {
 
         if ( version_compare( $current, '1.6', '<' ) ) {
             self::tag_pretty_links_imports();
+        }
+
+        if ( version_compare( $current, '1.7', '<' ) ) {
+            // The Link Fixer now defaults to off; sites that never saved the setting were running it.
+            add_option( 'katina_enable_link_fixer', 'yes' );
         }
 
         update_option( 'katina_db_version', self::DB_VERSION );

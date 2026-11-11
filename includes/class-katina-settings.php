@@ -21,7 +21,7 @@ class KATINA_Settings {
         if ( get_option( 'katina_blank_options_repaired' ) ) {
             return;
         }
-        $never_empty = array( 'katina_link_prefix', 'katina_redirect_type', 'katina_nofollow', 'katina_sponsored', 'katina_new_window', 'katina_pass_query_str', 'katina_content_link_attributes', 'katina_enable_click_tracking', 'katina_disable_ip_collection', 'katina_enable_link_fixer', 'katina_enable_link_health', 'katina_trusted_proxy', 'katina_store_bot_clicks' );
+        $never_empty = array( 'katina_link_prefix', 'katina_redirect_type', 'katina_nofollow', 'katina_sponsored', 'katina_new_window', 'katina_pass_query_str', 'katina_content_link_attributes', 'katina_enable_click_tracking', 'katina_disable_ip_collection', 'katina_enable_link_fixer', 'katina_enable_link_health', 'katina_trusted_proxy', 'katina_store_bot_clicks', 'katina_remove_data_on_uninstall' );
         foreach ( $never_empty as $option ) {
             if ( '' === get_option( $option ) ) {
                 delete_option( $option );
@@ -139,10 +139,14 @@ class KATINA_Settings {
         self::add_field( 'katina_excluded_bots', __( 'Excluded Bots (one per line)', 'katina-link-manager' ), 'textarea', 'katina_tracking', 'katina-settings-tracking' );
         self::add_field( 'katina_clicks_retention_days', __( 'Click Log Retention (days)', 'katina-link-manager' ), 'int', 'katina_tracking', 'katina-settings-tracking', (string) KATINA_Privacy::DEFAULT_RETENTION_DAYS, array(), __( 'Click records, including click IDs and source pages, older than this are deleted automatically each day. Set to 0 to keep forever (not GDPR-recommended).', 'katina-link-manager' ) );
 
+        add_settings_section( 'katina_data', __( 'Data', 'katina-link-manager' ), null, 'katina-settings-general' );
+
+        self::add_field( 'katina_remove_data_on_uninstall', __( 'Remove Data on Uninstall', 'katina-link-manager' ), 'select', 'katina_data', 'katina-settings-general', 'no', array( 'yes' => 'Yes', 'no' => 'No' ), __( 'Deleting the plugin removes every link, category and click record when this is Yes. With No, your data stays in the database for a reinstall.', 'katina-link-manager' ) );
+
         // Modules tab
         add_settings_section( 'katina_modules', __( 'Modules', 'katina-link-manager' ), array( __CLASS__, 'render_modules_section_intro' ), 'katina-settings-modules' );
 
-        self::add_field( 'katina_enable_link_fixer', __( 'Link Fixer', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'yes', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Rewrites outbound links in post content based on your rules.', 'katina-link-manager' ) );
+        self::add_field( 'katina_enable_link_fixer', __( 'Link Fixer', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Applies each cloaked link\'s rel, target and class in the visitor\'s browser, for links that themes or page builders output outside post content. Links in post content already get these when the page is built, so this adds a request to every page that has a cloaked link.', 'katina-link-manager' ) );
         self::add_field( 'katina_enable_link_health', __( 'Link Health Checks', 'katina-link-manager' ), 'select', 'katina_modules', 'katina-settings-modules', 'no', array( 'yes' => 'Enabled', 'no' => 'Disabled' ), __( 'Off by default. When enabled, the plugin periodically sends outbound HTTP requests to each link\'s destination URL to detect broken or error responses.', 'katina-link-manager' ) );
     }
 
